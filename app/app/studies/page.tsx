@@ -64,7 +64,7 @@ export default async function Page() {
 
   return (
     <div className="space-y-4 m-10">
-      <div className="flex gap-48">
+      <div className="flex ">
         <h1 className="w-full text-xl font-semibold">Study Programs</h1>
         <StudyForm />
       </div>
