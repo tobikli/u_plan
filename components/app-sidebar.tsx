@@ -11,6 +11,7 @@ import {
 import { ModeToggle } from "./theme-toggle";
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
+import { NavPrograms } from "@/components/nav-programs";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -30,8 +31,8 @@ export const navMainItems = [
     icon: IconDashboard,
   },
   {
-    title: "Studies",
-    url: "/app/studies",
+    title: "Programs",
+    url: "/app/programs",
     icon: IconCertificate,
   },
   {
@@ -91,6 +92,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        <NavPrograms />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

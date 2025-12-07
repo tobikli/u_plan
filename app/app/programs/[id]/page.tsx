@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
 import type { StudyProgram } from "@/types/study-program"
+import { ProgramForm } from "./program-form";
+import CoursesView from "./courses";
 
 function Info({ label, value }: { label: string; value: string | number }) {
   return (
@@ -52,12 +54,7 @@ export default async function StudyDetail({
           <h1 className="text-2xl font-semibold leading-tight">{program.name}</h1>
           <p className="text-sm text-muted-foreground">{program.institution}</p>
         </div>
-        <div className="text-right text-xs text-muted-foreground">
-          <div>Created {new Date(program.created_at).toLocaleDateString()}</div>
-          {program.updated_at && (
-            <div>Updated {new Date(program.updated_at).toLocaleDateString()}</div>
-          )}
-        </div>
+        <ProgramForm program={program} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -75,6 +72,7 @@ export default async function StudyDetail({
           </p>
         </div>
       )}
+      <CoursesView programId={program.id} />
     </div>
   )
 }

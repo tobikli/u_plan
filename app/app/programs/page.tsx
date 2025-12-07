@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/empty";
 import { createClient } from "@/lib/supabase/server";
 import type { StudyProgram } from "@/types/study-program";
-import { StudyForm } from "./studyform";
+import { StudyForm } from "./study-form";
 import Link from "next/link";
 
 export default async function Page() {
@@ -49,7 +49,7 @@ export default async function Page() {
             <EmptyMedia variant="icon">
               <IconCertificate />
             </EmptyMedia>
-            <EmptyTitle>No studies added yet</EmptyTitle>
+            <EmptyTitle>No Programs added yet</EmptyTitle>
             <EmptyDescription>
               Create your first study program to get started.
             </EmptyDescription>
@@ -78,7 +78,7 @@ export default async function Page() {
           .map((program: StudyProgram) => (
             <Link
               key={program.id}
-              href={`/app/studies/${program.id}`}
+              href={`/app/programs/${program.id}`}
               className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm w-full block hover:border-primary/60 transition-colors"
             >
               <div className="flex items-center justify-between gap-2">
