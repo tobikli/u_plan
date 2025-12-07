@@ -104,7 +104,7 @@ export function StudyForm() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Create Study Program</Button>
+        <Button variant="outline">New Study Program</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">

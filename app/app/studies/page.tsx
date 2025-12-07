@@ -64,36 +64,40 @@ export default async function Page() {
 
   return (
     <div className="space-y-4 m-10">
-      <h1 className="text-xl font-semibold">Study Programs</h1>
+      <div className="flex gap-48">
+        <h1 className="w-full text-xl font-semibold">Study Programs</h1>
+        <StudyForm />
+      </div>
       <div className="grid gap-3">
         {programs
           .sort(
             (a, b) =>
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime()
           )
           .map((program: StudyProgram) => (
-          <Link
-            key={program.id}
-            href={`/app/studies/${program.id}`}
-            className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm w-full block hover:border-primary/60 transition-colors"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <IconCertificate className="h-4 w-4" />
-                <h2 className="text-sm font-regular">{program.degree}</h2>
-                <h2 className="text-sm font-semibold">{program.name}</h2>
+            <Link
+              key={program.id}
+              href={`/app/studies/${program.id}`}
+              className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm w-full block hover:border-primary/60 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <IconCertificate className="h-4 w-4" />
+                  <h2 className="text-sm font-regular">{program.degree}</h2>
+                  <h2 className="text-sm font-semibold">{program.name}</h2>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(program.created_at).toLocaleDateString()}
+                </span>
               </div>
-              <span className="text-xs text-muted-foreground">
-                {new Date(program.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            {program.description && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                {program.description}
-              </p>
-            )}
-          </Link>
-        ))}
+              {program.description && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {program.description}
+                </p>
+              )}
+            </Link>
+          ))}
       </div>
     </div>
   );
