@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -16,12 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { degreeType } from "@/types/study-program";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import type { StudyProgram } from "@/types/study-program";
 
-export function CourseForm() {
-  const [degree, setDegree] = useState<degreeType | "">("");
+export function CourseForm(program: { program: StudyProgram }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -33,18 +32,18 @@ export function CourseForm() {
       const form = new FormData(e.currentTarget);
 
       const name = form.get("name")?.toString().trim() ?? "";
-      const institution = form.get("institution")?.toString().trim() ?? "";
-      const semestersRaw = form.get("semesters")?.toString().trim() ?? "";
+      const course_code = form.get("code")?.toString().trim() ?? "";
+      const gradeRaw = form.get("grade")?.toString().trim() ?? "";
+      const semestersRaw = form.get("semester")?.toString().trim() ?? "";
       const creditsRaw = form.get("credits")?.toString().trim() ?? "";
-      const description = form.get("description")?.toString().trim() ?? "";
+      const finishedRaw = form.get("finished")?.toString().trim() ?? "";
 
+      const finished = finishedRaw === "on" ? true : false;
+
+      const grade = gradeRaw ? Number(gradeRaw) : null;
       const semesters = Number(semestersRaw);
       const credits = Number(creditsRaw);
 
-      if (!degree) {
-        toast.error("Select a degree");
-        return;
-      }
 
       if (!name) {
         toast.error("Name is required");
@@ -69,28 +68,24 @@ export function CourseForm() {
         return;
       }
 
-      const { error: insertError } = await supabase
-        .from("study_programs")
-        .insert({
-          user_id: userResult.user.id,
-          degree,
-          name,
-          institution,
-          semesters,
-          credits,
-          current_semester: 1,
-          finished: false,
-          description: description || null,
-        });
+      const { error: insertError } = await supabase.from("courses").insert({
+        user_id: userResult.user.id,
+        program_id: program.program.id,
+        course_code,
+        name,
+        grade,
+        semesters,
+        credits,
+        finished,
+      });
 
       if (insertError) {
-        toast.error(insertError.message ?? "Failed to save program");
+        toast.error(insertError.message ?? "Failed to save course");
         return;
       }
 
-      setDegree("");
       setOpen(false);
-      toast.success("Study program created");
+      toast.success("Course added!");
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -103,60 +98,69 @@ export function CourseForm() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Create Study Program</Button>
+        <Button variant="outline">+</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Create New Study Program</DialogTitle>
-            <DialogDescription>
-              Create your current or future study program here.
-            </DialogDescription>
+            <DialogTitle>Add Course</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 my-5">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="grid gap-3">
-                <Label htmlFor="degree">Degree</Label>
-
+                <Label htmlFor="code">Code</Label>
+                <Input id="code" name="code" placeholder="IN0001" required />
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="semesters">Semesters</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input
-                  id="semesters"
-                  name="semesters"
-                  placeholder="6"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
+                  id="name"
+                  name="name"
+                  placeholder="Introduction to Informatics"
                   required
                   className="w-full"
                 />
               </div>
             </div>
             <div className="grid gap-3">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" placeholder="Computer Science" />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="institution">Institution</Label>
-              <Input
-                id="institution"
-                name="institution"
-                placeholder="Technical University of Munich"
-              />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="credits">Credits / ECTS</Label>
+              <Label htmlFor="credits">Credits</Label>
               <Input
                 id="credits"
                 name="credits"
-                placeholder="180"
+                placeholder="6"
                 type="number"
-                inputMode="numeric"
-                min="0"
                 required
               />
+            </div>
+            <div className="grid gap-3">
+              <Label htmlFor="grade">Grade</Label>
+              <Input
+                id="grade"
+                name="grade"
+                placeholder="1.0"
+                type="number"
+                step="0.1"
+                min="1.0"
+                max="5.0"
+              />
+            </div>
+            <div className="grid gap-3">
+              <Label htmlFor="semester">Semester</Label>
+              <Input
+                id="semester"
+                name="semester"
+                placeholder="1"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max={program.program.semesters}
+                required
+              />
+            </div>
+            <div className="flex items-center gap-3 my-2">
+              <Checkbox id="finished" />
+              <Label htmlFor="finished">Finished?</Label>
             </div>
           </div>
 

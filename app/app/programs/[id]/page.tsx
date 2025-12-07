@@ -1,34 +1,35 @@
-import { notFound, redirect } from "next/navigation"
+import { notFound, redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabase/server"
-import type { StudyProgram } from "@/types/study-program"
+import { createClient } from "@/lib/supabase/server";
+import type { StudyProgram } from "@/types/study-program";
 import { ProgramForm } from "./program-form";
-import CoursesView from "./courses";
-
+import { CourseTable } from "./courses";
+import { columns } from "./columns";
+import { CourseForm } from "./course-form";
 function Info({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border p-3 text-sm">
       <p className="text-muted-foreground">{label}</p>
       <p className="font-medium">{value}</p>
     </div>
-  )
+  );
 }
 
 export default async function StudyDetail({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }) {
-  const { id } = await params
+  const { id } = await params;
 
-  const supabase = await createClient()
+  const supabase = await createClient();
   const {
     data: { user },
     error: userError,
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   const { data, error } = await supabase
@@ -38,20 +39,33 @@ export default async function StudyDetail({
     )
     .eq("id", id)
     .eq("user_id", user.id)
-    .single()
+    .single();
 
   if (error || !data) {
-    notFound()
+    notFound();
   }
 
-  const program = data as StudyProgram
+  const program = data as StudyProgram;
+
+  const { data: coursesData, error: coursesError } = await supabase
+    .from("courses")
+    .select("*")
+    .eq("program_id", program.id);
+
+  if (coursesError) {
+    notFound();
+  }
+
+  const courses = coursesData ?? [];
 
   return (
     <div className="space-y-6 px-4 py-6 sm:px-6">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{program.degree}</p>
-          <h1 className="text-2xl font-semibold leading-tight">{program.name}</h1>
+          <h1 className="text-2xl font-semibold leading-tight">
+            {program.name}
+          </h1>
           <p className="text-sm text-muted-foreground">{program.institution}</p>
         </div>
         <ProgramForm program={program} />
@@ -72,7 +86,12 @@ export default async function StudyDetail({
           </p>
         </div>
       )}
-      <CoursesView programId={program.id} />
+      <hr />
+      <div className="flex">
+        <h1 className="text-xl font-semibold w-full">Courses</h1>
+        <CourseForm program={program} />
+      </div>
+      <CourseTable columns={columns} data={courses} />
     </div>
-  )
+  );
 }
