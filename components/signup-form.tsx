@@ -25,7 +25,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     try {
-      const { data, error } = await signUpNewUser(formData);
+      const { error } = await signUpNewUser(formData);
       if (error) {
         toast.error(error.message || "An error occurred");
         console.error("Signup error:", error);

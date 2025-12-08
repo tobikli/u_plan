@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -27,10 +26,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { degreeType } from "@/types/study-program";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import type { StudyProgram } from "@/types/study-program";
 import { useData } from "@/lib/data-provider";
 import {
   Select,
@@ -41,7 +38,6 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Course } from "@/types/course";
-import { Program } from "ogl";
 
 export function CourseForm({ course }: { course: Course }) {
   const [semester, setSemester] = useState(course.semesters.toString());

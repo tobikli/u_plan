@@ -1,16 +1,12 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { StudyProgram } from "@/types/study-program";
 import { useData } from "@/lib/data-provider";
 import { CourseForm } from "./course-form";
 
 import CenteredSpinner from "@/components/ui/centered-spinner";
-import { CircularProgress } from "@/components/customized/progress/progress-08";
-import { Button } from "@/components/ui/button";
-import { IconPlus, IconMinus } from "@tabler/icons-react";
-import { toast } from "sonner";
 import { Course } from "@/types/course";
 import Link from "next/link";
 

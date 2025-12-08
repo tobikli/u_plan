@@ -29,7 +29,7 @@ export function ResetForm({
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     try {
-      const { data, error } = await resetPassword(formData);
+      const { error } = await resetPassword(formData);
       if (error) {
         toast(error.message || "An error occurred");
         console.error("Signup error:", error);

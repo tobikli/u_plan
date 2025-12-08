@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { StudyProgram } from "@/types/study-program";
 import { useData } from "@/lib/data-provider";

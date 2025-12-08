@@ -12,6 +12,7 @@ import Autoplay from "embla-carousel-autoplay";
 import Logo from "@/public/uplan.svg";
 import LightRays from "@/components/LightRays";
 import { useTheme } from "next-themes";
+import Link from "next/link";
 
 export default function Home() {
   const handleTryItNow = () => {
@@ -91,12 +92,12 @@ export default function Home() {
             <a className="hover:text-foreground" href="/app">
               Dashboard
             </a>
-            <a className="hover:text-foreground" href="/app/studies">
+            <Link className="hover:text-foreground" href="/app/programs">
               Studies
-            </a>
-            <a className="hover:text-foreground" href="/app/courses">
+            </Link>
+            <Link className="hover:text-foreground" href="/app/courses">
               Courses
-            </a>
+            </Link>
           </div>
         </div>
       </footer>

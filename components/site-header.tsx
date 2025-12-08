@@ -10,7 +10,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import React, { useMemo } from "react";
+import React from "react";
 import Link from "next/dist/client/link";
 import { useData } from "@/lib/data-provider";
 
