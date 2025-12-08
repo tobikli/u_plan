@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { StudyProgram } from "@/types/study-program";
+import { useData } from "@/lib/data-provider";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -16,32 +14,9 @@ import {
 
 export function NavPrograms() {
   const pathname = usePathname();
-  const [programs, setPrograms] = useState<StudyProgram[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { studyPrograms, loading } = useData();
 
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      try {
-        const supabase = await createClient();
-        const { data, error } = await supabase
-          .from("study_programs")
-          .select("id, name, degree")
-          .order("created_at", { ascending: false });
-
-        if (!error && data) {
-          setPrograms(data as StudyProgram[]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch programs:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPrograms();
-  }, []);
-
-  if (loading || programs.length === 0) {
+  if (loading || studyPrograms.length === 0) {
     return null;
   }
 
@@ -50,7 +25,7 @@ export function NavPrograms() {
       <SidebarGroupLabel>Your Programs</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {programs.map((program) => (
+          {studyPrograms.map((program) => (
             <SidebarMenuItem key={program.id}>
               <SidebarMenuButton
                 asChild

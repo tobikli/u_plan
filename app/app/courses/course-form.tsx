@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -17,46 +17,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { useData } from "@/lib/data-provider";
 import { toast } from "sonner";
-
-type Program = {
-  id: string;
-  name: string;
-};
 
 export function CourseForm() {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [loadingPrograms, setLoadingPrograms] = useState(true);
+  const { studyPrograms, loading: loadingPrograms } = useData();
   const router = useRouter();
-
-  useEffect(() => {
-    const loadPrograms = async () => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("study_programs")
-          .select("id, name")
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          console.error(error);
-          toast.error("Failed to load programs");
-          return;
-        }
-
-        setPrograms(data ?? []);
-      } catch (err) {
-        console.error(err);
-        toast.error("Failed to load programs");
-      } finally {
-        setLoadingPrograms(false);
-      }
-    };
-
-    loadPrograms();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -146,13 +114,13 @@ export function CourseForm() {
                 id="program"
                 name="program"
                 required
-                disabled={loadingPrograms || programs.length === 0}
+                disabled={loadingPrograms || studyPrograms.length === 0}
                 className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="" disabled selected>
                   {loadingPrograms ? "Loading..." : "Select a program"}
                 </option>
-                {programs.map((program) => (
+                {studyPrograms.map((program) => (
                   <option key={program.id} value={program.id}>
                     {program.name}
                   </option>
