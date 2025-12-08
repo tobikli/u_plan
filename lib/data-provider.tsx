@@ -87,8 +87,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchCourses(), fetchStudyPrograms()]);
-      setLoading(false);
+      try {
+        await Promise.all([fetchCourses(), fetchStudyPrograms()]);
+      } catch (err) {
+        console.error("Error loading initial data:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadData();
@@ -100,7 +105,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     let programsChannel: RealtimeChannel | null = null;
 
     const setupSubscriptions = async () => {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        console.error("Failed to get user for subscriptions:", authError);
+        return;
+      }
       
       if (!userData.user) return;
 
@@ -117,8 +127,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             table: "courses",
             filter: `user_id=eq.${userId}`,
           },
-          (payload) => {
-            console.log("Courses change detected:", payload);
+          () => {
             fetchCourses();
           }
         )
@@ -135,8 +144,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             table: "study_programs",
             filter: `user_id=eq.${userId}`,
           },
-          (payload) => {
-            console.log("Programs change detected:", payload);
+          () => {
             fetchStudyPrograms();
           }
         )
