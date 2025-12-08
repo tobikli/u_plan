@@ -98,7 +98,8 @@ const { studyPrograms } = useData();
 
 ## Notes
 
-- The provider is wrapped at the root layout level (`app/layout.tsx`)
+- The provider is wrapped at the authenticated app layout level (`app/app/layout.tsx`)
+- This ensures the provider only runs after user authentication is verified
 - Data is scoped per user (filtered by `user_id`)
 - Subscriptions are automatically cleaned up on unmount
 - Error handling is built-in and non-blocking
