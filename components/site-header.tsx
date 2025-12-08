@@ -6,14 +6,13 @@ import { usePathname } from "next/navigation";
 import { capitalizeFirstLetter } from "@/util/utils";
 import {
   Breadcrumb,
-  BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import Link from "next/dist/client/link";
-import { createClient } from "@/lib/supabase/client";
+import { useData } from "@/lib/data-provider";
 
 // Helper to detect UUID patterns
 function isUUID(str: string): boolean {
@@ -21,45 +20,24 @@ function isUUID(str: string): boolean {
 }
 
 export function SiteHeader() {
-  const currentPath = capitalizeFirstLetter(
-    usePathname()
-      .split("/")
-      .findLast(() => true) || ""
-  );
   const pathname = usePathname().split("/").filter(Boolean);
-  const [programNames, setProgramNames] = useState<Record<string, string>>({});
+  const { studyPrograms } = useData();
 
-  // Fetch program names for UUIDs
-  useEffect(() => {
-    const fetchProgramNames = async () => {
-      const supabase = await createClient();
-      const uuids = pathname.filter(isUUID);
-      
-      if (uuids.length === 0) return;
-
-      const { data } = await supabase
-        .from("study_programs")
-        .select("id, name")
-        .in("id", uuids);
-
-      if (data) {
-        const names: Record<string, string> = {};
-        data.forEach((program) => {
-          names[program.id] = program.name;
-        });
-        setProgramNames(names);
-      }
-    };
-
-    fetchProgramNames();
-  }, [pathname]);
+  // Create a map of program IDs to names
+  const programNamesMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    studyPrograms.forEach((program) => {
+      map[program.id] = program.name;
+    });
+    return map;
+  }, [studyPrograms]);
 
   const segments = pathname.map((segment, index) => {
     const href = "/" + pathname.slice(0, index + 1).join("/");
     
     // If it's a UUID, use the program name if available
     if (isUUID(segment)) {
-      const displayName = programNames[segment] || "Loading...";
+      const displayName = programNamesMap[segment] || "Loading...";
       return (
         <React.Fragment key={segment}>
           <BreadcrumbLink asChild>
