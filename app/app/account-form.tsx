@@ -21,9 +21,11 @@ import { useRouter } from "next/navigation";
 export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [createdAt, setCreatedAt] = useState("");
+  const [resetPath, setResetPath] = useState("");
 
   const router = useRouter();
   useEffect(() => {
@@ -33,6 +35,9 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
       const user = data.user;
       setEmail(user.email ?? "");
       setCreatedAt(user.created_at ?? "");
+      setResetPath(
+        "/auth/forgot-password?email=" + encodeURIComponent(user.email ?? "")
+      );
       const metaName =
         (user.user_metadata as { full_name?: string; name?: string } | null)
           ?.full_name ??
@@ -42,6 +47,30 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
       setName(metaName);
     });
   }, []);
+
+  const handleAccountDelete = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch("/auth/delete", { method: "POST" });
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error ?? "Failed to delete account");
+        return;
+      }
+
+      toast.success("Account deleted!");
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push("/auth/login");
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error while deleting");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -54,11 +83,13 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
 
       if (!name) {
         toast.error("Name is required");
+        setSubmitting(false);
         return;
       }
 
       if (!email) {
         toast.error("Email is required");
+        setSubmitting(false);
         return;
       }
 
@@ -70,16 +101,15 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
         return;
       }
 
-      const { data, error } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         email: email,
-        data: { name: name }
+        data: { name: name },
       });
 
       if (error) {
         toast.error(error.message ?? "Failed to save program");
         return;
       }
-
 
       setOpen(false);
       toast.success("Account saved!");
@@ -126,7 +156,7 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
               />
             </div>
             <div className="grid gap-3">
-              <a className="underline" href="/auth/forgot-password">
+              <a className="underline" href={resetPath}>
                 Update Password
               </a>
             </div>
@@ -135,6 +165,15 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
             </p>
           </div>
           <DialogFooter>
+            <Button
+              onClick={handleAccountDelete}
+              type="button"
+              className="bg-red-500 hover:bg-red-700"
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete Account"}
+            </Button>
+            <span className="w-full"></span>
             <DialogClose asChild>
               <Button variant="outline" type="button">
                 Cancel
