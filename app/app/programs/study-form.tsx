@@ -21,10 +21,12 @@ import type { degreeType } from "@/types/study-program";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 
+
 export function StudyForm() {
   const [degree, setDegree] = useState<degreeType | "">("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -101,6 +103,8 @@ export function StudyForm() {
     }
   };
 
+  
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -166,6 +170,7 @@ export function StudyForm() {
           </div>
 
           <DialogFooter>
+            
             <DialogClose asChild>
               <Button variant="outline" type="button">
                 Cancel

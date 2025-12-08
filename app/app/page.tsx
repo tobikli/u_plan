@@ -1,16 +1,13 @@
-import { SkeletonCard } from "@/components/skeleton-card";
+"use client";
+
+import { IconCrane } from "@tabler/icons-react";
 
 export default function Page() {
-  const skeletons = Array.from({ length: 1 });
-
   return (
-    <div className="flex flex-1 flex-col m-5">
-      <div className="@container/main flex flex-5 flex-col gap-2">
-        <div className="grid gap-4 py-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {skeletons.map((_, idx) => (
-            <SkeletonCard key={idx} />
-          ))}
-        </div>
+    <div className="flex justify-center items-center h-full">
+      <div className="grid gap-4 align-items-center justify-items-center">
+        <IconCrane className="size-32 text-muted-foreground" />
+        <p className="text-xl font-bold">Under Construction</p>
       </div>
     </div>
   );

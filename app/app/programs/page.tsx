@@ -1,5 +1,6 @@
+"use client";
+
 import { IconCertificate } from "@tabler/icons-react";
-import { redirect } from "next/navigation";
 
 import {
   Empty,
@@ -9,39 +10,19 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { createClient } from "@/lib/supabase/server";
 import type { StudyProgram } from "@/types/study-program";
 import { StudyForm } from "./study-form";
 import Link from "next/link";
+import { useData } from "@/lib/data-provider";
+import CenteredSpinner from "@/components/ui/centered-spinner";
+import { Badge } from "@/components/ui/badge";
 
-export default async function Page() {
-  const supabase = await createClient();
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+export default function Page() {
+  const { studyPrograms, loading } = useData();
 
-  if (userError || !userData.user) {
-    redirect("/auth/login");
-  }
+  if (loading) return <CenteredSpinner />;
 
-  const userId = userData.user.id;
-
-  const { data: programs, error } = await supabase
-    .from("study_programs")
-    .select(
-      "id, user_id, name, degree, institution, semesters, current_semester, finished, credits, description, created_at, updated_at"
-    )
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    // Surface a simple fallback; in production you might log this.
-    return (
-      <div className="p-4 text-sm text-red-600">
-        Failed to load programs. {error.message}
-      </div>
-    );
-  }
-
-  if (!programs || programs.length === 0) {
+  if (!studyPrograms || studyPrograms.length === 0) {
     return (
       <div className="flex min-h-dvh items-center justify-center px-4">
         <Empty className="w-full max-w-xl border border-dashed">
@@ -69,7 +50,7 @@ export default async function Page() {
         <StudyForm />
       </div>
       <div className="grid gap-3">
-        {programs
+        {studyPrograms
           .sort(
             (a, b) =>
               new Date(b.created_at).getTime() -
@@ -87,9 +68,17 @@ export default async function Page() {
                   <h2 className="text-sm font-regular">{program.degree}</h2>
                   <h2 className="text-sm font-semibold">{program.name}</h2>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(program.created_at).toLocaleDateString()}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={program.finished ? "default" : "secondary"}
+                    className={program.finished ? "bg-green-500 text-white" : ""}
+                  >
+                    {program.finished ? "Finished" : "In progress"}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(program.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
               {program.description && (
                 <p className="mt-2 text-sm text-muted-foreground">

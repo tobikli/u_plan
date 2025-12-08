@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { StudyProgram } from "@/types/study-program";
+import { IconPlus } from "@tabler/icons-react";
 
 export function CourseForm(program: { program: StudyProgram }) {
   const [open, setOpen] = useState(false);
@@ -43,7 +44,6 @@ export function CourseForm(program: { program: StudyProgram }) {
       const grade = gradeRaw ? Number(gradeRaw) : null;
       const semesters = Number(semestersRaw);
       const credits = Number(creditsRaw);
-
 
       if (!name) {
         toast.error("Name is required");
@@ -98,7 +98,7 @@ export function CourseForm(program: { program: StudyProgram }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">+</Button>
+        <Button className="size-8" variant="outline"><IconPlus /></Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">
@@ -107,12 +107,18 @@ export function CourseForm(program: { program: StudyProgram }) {
             <DialogTitle>Add Course</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 my-5">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex gap-3">
               <div className="grid gap-3">
                 <Label htmlFor="code">Code</Label>
-                <Input id="code" name="code" placeholder="IN0001" required />
+                <Input
+                  className="max-w-40"
+                  id="code"
+                  name="code"
+                  placeholder="IN0001"
+                  required
+                />
               </div>
-              <div className="grid gap-3">
+              <div className="grid gap-3 w-full">
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"

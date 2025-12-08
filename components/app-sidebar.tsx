@@ -83,6 +83,7 @@ export function AppSidebar({
                 <a href="#">
                   <Logo className="size-6! text-black dark:text-white" />
                   <span className="text-base font-semibold">U_PLAN</span>
+                  <p className="text-xs translate-y-0.5 text-gray-600 dark:text-gray-300">v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
                 </a>
               </SidebarMenuButton>
               <ModeToggle />

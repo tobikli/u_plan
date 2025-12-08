@@ -1,6 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
+import Link from "next/link"
 import { Course } from "@/types/course"
 
 type CourseWithProgram = Course & { program_name?: string }
@@ -10,7 +11,20 @@ export const columns: ColumnDef<CourseWithProgram>[] = [
     id: "program",
     header: "Program",
     accessorFn: (row) => row.program_name ?? row.program_id,
-    cell: ({ row }) => row.original.program_name ?? row.original.program_id,
+    cell: ({ row }) => {
+      const programId = row.original.program_id
+      const programName = row.original.program_name ?? row.original.program_id
+      return programId ? (
+        <Link
+          href={`/app/programs/${programId}`}
+          className="text-primary underline"
+        >
+          {programName}
+        </Link>
+      ) : (
+        <span>{programName}</span>
+      )
+    },
   },
   {
     accessorKey: "course_code",

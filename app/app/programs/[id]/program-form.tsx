@@ -14,6 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DegreeDrop } from "../components/degreedrop";
@@ -21,6 +32,7 @@ import type { degreeType } from "@/types/study-program";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { StudyProgram } from "@/types/study-program";
+import { useData } from "@/lib/data-provider";
 
 export function ProgramForm({ program }: { program: StudyProgram }) {
   const [degree, setDegree] = useState<degreeType | "">(program.degree);
@@ -30,8 +42,9 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
   const [credits, setCredits] = useState(program.credits.toString());
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const { refreshStudyPrograms } = useData();
   const router = useRouter();
-
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -108,6 +121,37 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
     }
   };
 
+  const handleStudyDelete = async () => {
+    setDeleting(true);
+    try {
+      const supabase = createClient();
+      const { data: userResult, error: userError } =
+        await supabase.auth.getUser();
+      if (userError || !userResult.user) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from("study_programs")
+        .delete()
+        .eq("user_id", userResult.user.id)
+        .eq("id", program.id);
+
+      if (deleteError) {
+        toast.error(deleteError.message ?? "Failed to delete program");
+        return;
+      }
+
+      toast.success("Study program deleted");
+      refreshStudyPrograms();
+      router.push("/app/programs");
+      router.refresh();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -146,7 +190,12 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
             </div>
             <div className="grid gap-3">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                id="name"
+                name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
             <div className="grid gap-3">
               <Label htmlFor="institution">Institution</Label>
@@ -173,6 +222,37 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
           </div>
 
           <DialogFooter>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  className="bg-red-500 hover:bg-red-700 text-white"
+                >
+                  Delete Program
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Program?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently deletes this program and its courses. This action
+                    cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-500 hover:bg-red-700 text-white"
+                    onClick={handleStudyDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <span className="w-full"></span>
+
             <DialogClose asChild>
               <Button variant="outline" type="button">
                 Cancel

@@ -6,6 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table"
+import { useRouter } from "next/navigation"
 
 import {
   Table,
@@ -19,12 +20,15 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  getRowHref?: (row: TData) => string | undefined
 }
 
 export function CourseTable<TData, TValue>({
   columns,
   data,
+  getRowHref,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter()
   const table = useReactTable({
     data,
     columns,
@@ -57,6 +61,21 @@ export function CourseTable<TData, TValue>({
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
+                role={getRowHref ? "link" : undefined}
+                tabIndex={getRowHref ? 0 : undefined}
+                className={getRowHref ? "cursor-pointer" : undefined}
+                onClick={() => {
+                  const href = getRowHref?.(row.original)
+                  if (href) router.push(href)
+                }}
+                onKeyDown={(e) => {
+                  if (!getRowHref) return
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    const href = getRowHref(row.original)
+                    if (href) router.push(href)
+                  }
+                }}
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (

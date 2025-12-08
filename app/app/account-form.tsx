@@ -12,6 +12,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -36,7 +47,7 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
       setEmail(user.email ?? "");
       setCreatedAt(user.created_at ?? "");
       setResetPath(
-        "/auth/forgot-password?email=" + encodeURIComponent(user.email ?? "")
+        "/auth/update-password"
       );
       const metaName =
         (user.user_metadata as { full_name?: string; name?: string } | null)
@@ -165,14 +176,36 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
             </p>
           </div>
           <DialogFooter>
-            <Button
-              onClick={handleAccountDelete}
-              type="button"
-              className="bg-red-500 hover:bg-red-700"
-              disabled={deleting}
-            >
-              {deleting ? "Deleting..." : "Delete Account"}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  className="bg-red-500 hover:bg-red-700 text-white"
+                >
+                  Delete Account
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete account?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently deletes your account and data. This action
+                    cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-500 hover:bg-red-700 text-white"
+                    onClick={handleAccountDelete}
+                    disabled={deleting}
+                  >
+                    {deleting ? "Deleting..." : "Delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <span className="w-full"></span>
             <DialogClose asChild>
               <Button variant="outline" type="button">

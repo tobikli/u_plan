@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 
 import {
   Table,
@@ -14,22 +14,27 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
+import { useRouter } from "next/navigation";
 
 interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  getRowHref?: (row: TData) => string | undefined;
 }
 
 export function CourseTable<TData, TValue>({
   columns,
   data,
+  getRowHref,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter();
+
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-  })
+  });
 
   return (
     <div className="overflow-hidden rounded-md border">
@@ -47,7 +52,7 @@ export function CourseTable<TData, TValue>({
                           header.getContext()
                         )}
                   </TableHead>
-                )
+                );
               })}
             </TableRow>
           ))}
@@ -57,6 +62,21 @@ export function CourseTable<TData, TValue>({
             table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
+                role={getRowHref ? "link" : undefined}
+                tabIndex={getRowHref ? 0 : undefined}
+                className={getRowHref ? "cursor-pointer" : undefined}
+                onClick={() => {
+                  const href = getRowHref?.(row.original);
+                  if (href) router.push(href);
+                }}
+                onKeyDown={(e) => {
+                  if (!getRowHref) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    const href = getRowHref(row.original);
+                    if (href) router.push(href);
+                  }
+                }}
                 data-state={row.getIsSelected() && "selected"}
               >
                 {row.getVisibleCells().map((cell) => (
@@ -76,5 +96,5 @@ export function CourseTable<TData, TValue>({
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }
