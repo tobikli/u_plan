@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { capitalizeFirstLetter } from "@/util/utils";
 import {
   Breadcrumb,
-  BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbSeparator,
@@ -21,11 +20,6 @@ function isUUID(str: string): boolean {
 }
 
 export function SiteHeader() {
-  const currentPath = capitalizeFirstLetter(
-    usePathname()
-      .split("/")
-      .findLast(() => true) || ""
-  );
   const pathname = usePathname().split("/").filter(Boolean);
   const { studyPrograms } = useData();
 

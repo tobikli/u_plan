@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Course } from "@/types/course";
 import type { StudyProgram } from "@/types/study-program";
@@ -26,7 +26,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   // Fetch courses
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       
@@ -52,10 +52,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching courses:", err);
       setError("Failed to fetch courses");
     }
-  };
+  }, [supabase]);
 
   // Fetch study programs
-  const fetchStudyPrograms = async () => {
+  const fetchStudyPrograms = useCallback(async () => {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       
@@ -81,7 +81,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching study programs:", err);
       setError("Failed to fetch study programs");
     }
-  };
+  }, [supabase]);
 
   // Initial data fetch
   useEffect(() => {
@@ -92,7 +92,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadData();
-  }, []);
+  }, [fetchCourses, fetchStudyPrograms]);
 
   // Set up real-time subscriptions
   useEffect(() => {
@@ -154,7 +154,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.removeChannel(programsChannel);
       }
     };
-  }, []);
+  }, [supabase, fetchCourses, fetchStudyPrograms]);
 
   const value: DataContextType = {
     courses,
