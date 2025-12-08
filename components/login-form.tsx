@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { IconBrandGoogle } from "@tabler/icons-react";
 import {
   Card,
   CardContent,
@@ -17,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import Logo from "@/public/uplan.svg";
+import { Separator } from "./ui/separator";
 
 export function LoginForm({
   className,
@@ -40,10 +42,30 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      toast.success("Welcome back, " + data.user.user_metadata.name || "" + "!");
+      toast.success(
+        "Welcome back, " + data.user.user_metadata.name || "" + "!"
+      );
       router.push("/app");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=/app`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
       setIsLoading(false);
     }
   };
@@ -52,7 +74,10 @@ export function LoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl flex gap-4"><Logo className="size-9" />Login</CardTitle>
+          <CardTitle className="text-2xl flex gap-4">
+            <Logo className="size-9" />
+            Login
+          </CardTitle>
           <CardDescription>
             Enter your email below to login to your account
           </CardDescription>
@@ -94,6 +119,15 @@ export function LoginForm({
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </div>
+            <div className="relative my-4 flex items-center justify-center overflow-hidden">
+              <Separator />
+              <div className="px-2 text-center bg-card text-sm">OR</div>
+              <Separator />
+            </div>
+            <Button onClick={handleGoogleLogin} variant="outline" type="button" className="w-full">
+              <IconBrandGoogle />
+              Login with Google
+            </Button>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
               <Link
