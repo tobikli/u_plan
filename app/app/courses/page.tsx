@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCertificate } from "@tabler/icons-react";
+import { IconFileText } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import {
   Empty,
@@ -86,7 +86,7 @@ export default function Page() {
         <Empty className="w-full max-w-xl border border-dashed">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <IconCertificate />
+              <IconFileText />
             </EmptyMedia>
             <EmptyTitle>No courses added yet</EmptyTitle>
             <EmptyDescription>

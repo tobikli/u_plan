@@ -27,7 +27,7 @@ function Info({ label, value }: { label: string; value: string | number }) {
 export default function StudyDetail() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { studyPrograms, courses, loading } = useData();
+  const { studyPrograms, courses, loading, preferences } = useData();
 
   const program = useMemo(
     () => studyPrograms.find((p) => p.id === params.id),
@@ -51,10 +51,18 @@ export default function StudyDetail() {
   }, [program, currentCredits]);
 
   const averageGrade = useMemo(() => {
+    if (loading) return null; // wait until data (including preferences) is loaded
+    if (!preferences) return null;
     if (programCourses.length === 0) return 0;
     const relevantCourses = programCourses.filter(
-      (course) => course.grade !== null && course.credits > 0
+      (course) =>
+        course.grade !== null &&
+        course.credits > 0 &&
+        (preferences.grade_include_failed
+          ? true
+          : course.grade != null && course.grade <= preferences.grade_passed)
     );
+
     const totalWeightedGrades = relevantCourses.reduce(
       (sum, course) => sum + course.grade! * course.credits,
       0
@@ -65,7 +73,7 @@ export default function StudyDetail() {
     );
     if (totalCredits === 0) return 0;
     return totalWeightedGrades / totalCredits;
-  }, [programCourses]);
+  }, [programCourses, preferences, loading]);
 
   if (loading) {
     return <CenteredSpinner />;
@@ -191,10 +199,11 @@ export default function StudyDetail() {
             showLabel
             renderLabel={(v) => `${v}%`}
             labelClassName="text-xl font-bold"
-            className=""
+            className={progressPercent < 100 ? "stroke-orange-500/25" : "stroke-green-500/25"}
+            progressClassName={progressPercent < 100 ? "stroke-orange-700" : "stroke-green-700"}
           />
           <div className="flex items-center justify-center">
-            <p className="text-2xl font-semibold border rounded-xl p-5">
+            <p className="text-xl font-semibold border rounded-xl p-5 text-center">
               {" "}
               {currentCredits} / {program.credits} Credits
             </p>
@@ -203,8 +212,8 @@ export default function StudyDetail() {
       </div>
       <div className="rounded-md border p-3 text-sm">
         <p className="text-muted-foreground">Grade</p>
-        <p className="text-center p-3 align-middle text-xl font-semibold flex items-center justify-center">
-          {averageGrade.toFixed(2)}
+        <p className="text-center p-3 align-middle text-2xl font-semibold flex items-center justify-center">
+          {averageGrade?.toFixed(2)}
         </p>
       </div>
       {program.description && (
