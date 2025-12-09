@@ -57,11 +57,14 @@ export function LoginForm({
     setIsLoading(true);
     setError(null);
     try {
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-          }/auth/callback?next=/app`,
+          redirectTo: `${origin}/auth/callback?next=/app`,
         },
       });
       if (error) throw error;
