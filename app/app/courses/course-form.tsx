@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useData } from "@/lib/data-provider";
 import { toast } from "sonner";
+import { TagInput } from "./tag-input";
 
 export function CourseForm({
   trigger,
@@ -35,8 +36,22 @@ export function CourseForm({
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [programId, setProgramId] = useState("");
-  const { studyPrograms, loading: loadingPrograms, preferences } = useData();
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const { studyPrograms, loading: loadingPrograms, preferences, courses } = useData();
   const router = useRouter();
+
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          courses
+            .flatMap((c) => c.tags || [])
+            .map((t) => t.trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [courses]
+  );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -57,6 +72,7 @@ export function CourseForm({
       const grade = gradeRaw ? Number(gradeRaw) : null;
       const semesters = Number(semestersRaw);
       const credits = Number(creditsRaw);
+      const tagList = selectedTags;
 
       if (!name) {
         toast.error("Name is required");
@@ -95,6 +111,7 @@ export function CourseForm({
         semesters,
         credits,
         finished,
+        tags: tagList,
       });
 
       if (insertError) {
@@ -203,6 +220,13 @@ export function CourseForm({
                 required
               />
             </div>
+
+            <TagInput
+              selected={selectedTags}
+              onChange={setSelectedTags}
+              available={availableTags}
+              placeholder="Press Enter to add tag"
+            />
 
             <div className="flex items-center gap-3 my-2">
               <Checkbox id="finished" name="finished" />

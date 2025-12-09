@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,27 @@ import { toast } from "sonner";
 import type { StudyProgram } from "@/types/study-program";
 import { IconPlus } from "@tabler/icons-react";
 import { useData } from "@/lib/data-provider";
+import { TagInput } from "../../courses/tag-input";
 
 export function CourseForm(program: { program: StudyProgram }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-  const { preferences } = useData();
+  const { preferences, courses } = useData();
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          courses
+            .flatMap((c) => c.tags || [])
+            .map((t) => t.trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [courses]
+  );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,6 +61,7 @@ export function CourseForm(program: { program: StudyProgram }) {
       const grade = gradeRaw ? Number(gradeRaw) : null;
       const semesters = Number(semestersRaw);
       const credits = Number(creditsRaw);
+      const tagList = selectedTags;
 
       if (!name) {
         toast.error("Name is required");
@@ -79,6 +95,7 @@ export function CourseForm(program: { program: StudyProgram }) {
         semesters,
         credits,
         finished,
+        tags: tagList,
       });
 
       if (insertError) {
@@ -100,7 +117,9 @@ export function CourseForm(program: { program: StudyProgram }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="size-8" variant="outline"><IconPlus /></Button>
+        <Button className="size-8" variant="outline">
+          <IconPlus />
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">
@@ -166,8 +185,14 @@ export function CourseForm(program: { program: StudyProgram }) {
                 required
               />
             </div>
+            <TagInput
+              selected={selectedTags}
+              onChange={setSelectedTags}
+              available={availableTags}
+              placeholder="Press Enter to add tag"
+            />
             <div className="flex items-center gap-3 my-2">
-              <Checkbox id="finished" />
+              <Checkbox id="finished" name="finished" />
               <Label htmlFor="finished">Finished?</Label>
             </div>
           </div>

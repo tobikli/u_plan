@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Course } from "@/types/course";
+import { TagInput } from "../tag-input";
 
 export function CourseForm({ course }: { course: Course }) {
   const [semester, setSemester] = useState(course.semesters.toString());
@@ -45,6 +46,7 @@ export function CourseForm({ course }: { course: Course }) {
   const [code, setCode] = useState(course.course_code);
   const [grade, setGrade] = useState(course.grade?.toString());
   const [credits, setCredits] = useState(course.credits.toString());
+  const [selectedTags, setSelectedTags] = useState<string[]>(course.tags ?? []);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -53,10 +55,24 @@ export function CourseForm({ course }: { course: Course }) {
     loading: loadingPrograms,
     refreshStudyPrograms,
     refreshCourses,
-    preferences
+    preferences,
+    courses,
   } = useData();
   const [programId, setProgramId] = useState(course.program_id);
   const router = useRouter();
+
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          courses
+            .flatMap((c) => c.tags || [])
+            .map((t) => t.trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [courses]
+  );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,6 +92,7 @@ export function CourseForm({ course }: { course: Course }) {
       const grade = gradeRaw ? Number(gradeRaw) : null;
       const semesters = Number(semestersRaw);
       const credits = Number(creditsRaw);
+      const tagList = selectedTags;
 
       if (!course_code) {
         toast.error("Select a code");
@@ -116,6 +133,7 @@ export function CourseForm({ course }: { course: Course }) {
           semesters,
           credits,
           finished,
+          tags: tagList,
         })
         .eq("id", course.id);
 
@@ -268,8 +286,19 @@ export function CourseForm({ course }: { course: Course }) {
               />
             </div>
 
+            <TagInput
+              selected={selectedTags}
+              onChange={setSelectedTags}
+              available={availableTags}
+              placeholder="Press Enter to add tag"
+            />
+
             <div className="flex items-center gap-3 my-2">
-              <Checkbox id="finished" name="finished" />
+              <Checkbox
+                id="finished"
+                name="finished"
+                defaultChecked={course.finished ?? false}
+              />
               <Label htmlFor="finished">Finished?</Label>
             </div>
           </div>

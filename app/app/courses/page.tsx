@@ -32,7 +32,7 @@ export default function Page() {
   const { courses, studyPrograms, loading } = useData();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<
-    "name" | "course_code" | "credits" | "grade"
+    "name" | "course_code" | "credits" | "grade" | "tags"
   >("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const coursesWithProgram: CourseWithProgram[] = courses.map((course) => ({
@@ -43,11 +43,13 @@ export default function Page() {
   const filteredAndSorted = useMemo(() => {
     const term = search.trim().toLowerCase();
     const filtered = term
-      ? coursesWithProgram.filter((c) =>
-          [c.name, c.course_code, c.program_name]
+      ? coursesWithProgram.filter((c) => {
+          const tagMatch = (c.tags || []).some((t) => t.toLowerCase().includes(term));
+          const textMatch = [c.name, c.course_code, c.program_name]
             .filter(Boolean)
-            .some((v) => v!.toLowerCase().includes(term))
-        )
+            .some((v) => v!.toLowerCase().includes(term));
+          return textMatch || tagMatch;
+        })
       : coursesWithProgram;
 
     const sorted = [...filtered].sort((a, b) => {
@@ -62,6 +64,10 @@ export default function Page() {
             return c.grade === null || c.grade === undefined
               ? Infinity
               : c.grade;
+          case "tags":
+            return (c.tags && c.tags.length > 0)
+              ? c.tags.join(", ").toLowerCase()
+              : "";
           case "name":
           default:
             return c.name ?? "";
@@ -111,7 +117,7 @@ export default function Page() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, code, program"
+            placeholder="Search by name, code, program, tag"
             className="w-full"
           />
         </div>
@@ -130,6 +136,8 @@ export default function Page() {
             <SelectItem value="course_code">Course Code</SelectItem>
             <SelectItem value="credits">Credits</SelectItem>
             <SelectItem value="grade">Grade</SelectItem>
+            <SelectItem value="tags">Tags</SelectItem>
+            
           </SelectContent>
         </Select>
         <Select

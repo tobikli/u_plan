@@ -7,6 +7,7 @@ export type Course = {
   program_id: string
   semesters: number
   finished: boolean
+  tags?: string[] | null
   user_id: string
   created_at: string
   updated_at?: string | null
