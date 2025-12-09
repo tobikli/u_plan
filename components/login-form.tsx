@@ -59,8 +59,8 @@ export function LoginForm({
     try {
       const origin =
         typeof window !== "undefined"
-          ? window.location.origin
-          : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+          ? process.env.NEXT_PUBLIC_BASE_URL
+          : process.env.NEXT_PUBLIC_BASE_URL;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -128,7 +128,12 @@ export function LoginForm({
               <div className="px-2 text-center bg-card text-sm">OR</div>
               <Separator />
             </div>
-            <Button onClick={handleGoogleLogin} variant="outline" type="button" className="w-full">
+            <Button
+              onClick={handleGoogleLogin}
+              variant="outline"
+              type="button"
+              className="w-full"
+            >
               <IconBrandGoogle />
               Login with Google
             </Button>
