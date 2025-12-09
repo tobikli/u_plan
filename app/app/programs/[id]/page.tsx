@@ -320,7 +320,7 @@ export default function StudyDetail() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="h-full bg-black/0">
+        <Card className="h-full bg-black/0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle>Average grade per semester</CardTitle>
             <CardDescription>Weighted by credits</CardDescription>
@@ -329,41 +329,45 @@ export default function StudyDetail() {
             {gradeBySemester.length === 0 ? (
               <p className="text-sm text-muted-foreground">No graded courses yet.</p>
             ) : (
-              <ChartContainer
-                config={gradeBySemesterConfig}
-                className="w-full h-[260px]"
-              >
-                <LineChart data={gradeBySemester}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="semester"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    domain={[1, 5]}
-                    tickCount={5}
-                    tickLine={false}
-                    axisLine={false}
-                    width={30}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line
-                    type="monotone"
-                    dataKey="average"
-                    stroke="var(--color-average)"
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: "var(--color-average)" }}
-                    activeDot={{ r: 5 }}
-                  />
-                </LineChart>
-              </ChartContainer>
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-[320px]">
+                  <ChartContainer
+                    config={gradeBySemesterConfig}
+                    className="w-full h-[260px]"
+                  >
+                    <LineChart data={gradeBySemester}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="semester"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                      />
+                      <YAxis
+                        domain={[1, 5]}
+                        tickCount={5}
+                        tickLine={false}
+                        axisLine={false}
+                        width={30}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line
+                        type="monotone"
+                        dataKey="average"
+                        stroke="var(--color-average)"
+                        strokeWidth={2}
+                        dot={{ r: 3, fill: "var(--color-average)" }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="h-full bg-black/0">
+        <Card className="h-full bg-black/0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle>Grade distribution</CardTitle>
             <CardDescription>Count of graded courses</CardDescription>
@@ -372,32 +376,36 @@ export default function StudyDetail() {
             {gradeDistribution.length === 0 ? (
               <p className="text-sm text-muted-foreground">No grades recorded yet.</p>
             ) : (
-              <ChartContainer
-                config={gradeDistributionConfig}
-                className="w-full h-[260px] "
-              >
-                <BarChart data={gradeDistribution}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="grade"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tickLine={false}
-                    axisLine={false}
-                    width={30}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar
-                    dataKey="count"
-                    fill="var(--color-count)"
-                    radius={[6, 6, 0, 0]}
-                  />
-                </BarChart>
-              </ChartContainer>
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-[320px]">
+                  <ChartContainer
+                    config={gradeDistributionConfig}
+                    className="w-full h-[260px] "
+                  >
+                    <BarChart data={gradeDistribution}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="grade"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tickLine={false}
+                        axisLine={false}
+                        width={30}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar
+                        dataKey="count"
+                        fill="var(--color-count)"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
