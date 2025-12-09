@@ -20,11 +20,13 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { StudyProgram } from "@/types/study-program";
 import { IconPlus } from "@tabler/icons-react";
+import { useData } from "@/lib/data-provider";
 
 export function CourseForm(program: { program: StudyProgram }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+  const { preferences } = useData();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -147,8 +149,8 @@ export function CourseForm(program: { program: StudyProgram }) {
                 placeholder="1.0"
                 type="number"
                 step="0.1"
-                min="1.0"
-                max="5.0"
+                min={preferences?.grade_min || 1.0}
+                max={preferences?.grade_max || 5.0}
               />
             </div>
             <div className="grid gap-3">

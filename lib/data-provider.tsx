@@ -5,14 +5,17 @@ import { createClient } from "@/lib/supabase/client";
 import type { Course } from "@/types/course";
 import type { StudyProgram } from "@/types/study-program";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { Preferences } from "@/types/preferences";
 
 type DataContextType = {
   courses: Course[];
   studyPrograms: StudyProgram[];
+  preferences: Preferences | null;
   loading: boolean;
   error: string | null;
   refreshCourses: () => Promise<void>;
   refreshStudyPrograms: () => Promise<void>;
+  refreshPreferences: () => Promise<void>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -20,6 +23,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export function DataProvider({ children }: { children: React.ReactNode }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
+  const [preferences, setPreferences] = useState<Preferences | null>(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,12 +87,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [supabase]);
 
+  const fetchPreferences = useCallback(async () => {
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        setPreferences(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("preferences")
+        .select("*")
+        .eq("user_id", userData.user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching preferences:", error);
+        setError(error.message);
+        return;
+      }
+
+      setPreferences(data || null);
+    } catch (err) {
+      console.error("Error fetching preferences:", err);
+      setError("Failed to fetch preferences");
+    }
+  }, [supabase]);
+
   // Initial data fetch
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchCourses(), fetchStudyPrograms()]);
+        await Promise.all([fetchCourses(), fetchStudyPrograms(), fetchPreferences()]);
       } catch (err) {
         console.error("Error loading initial data:", err);
       } finally {
@@ -97,12 +129,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadData();
-  }, [fetchCourses, fetchStudyPrograms]);
+  }, [fetchCourses, fetchStudyPrograms, fetchPreferences]);
 
   // Set up real-time subscriptions
   useEffect(() => {
     let coursesChannel: RealtimeChannel | null = null;
     let programsChannel: RealtimeChannel | null = null;
+    let preferencesChannel: RealtimeChannel | null = null;
 
     const setupSubscriptions = async () => {
       const { data: userData, error: authError } = await supabase.auth.getUser();
@@ -149,6 +182,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           }
         )
         .subscribe();
+
+      // Subscribe to preferences changes
+      preferencesChannel = supabase
+        .channel("preferences-changes")
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "preferences",
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            fetchPreferences();
+          }
+        )
+        .subscribe();
     };
 
     setupSubscriptions();
@@ -161,16 +211,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       if (programsChannel) {
         supabase.removeChannel(programsChannel);
       }
+      if (preferencesChannel) {
+        supabase.removeChannel(preferencesChannel);
+      }
     };
   }, [supabase, fetchCourses, fetchStudyPrograms]);
 
   const value: DataContextType = {
     courses,
     studyPrograms,
+    preferences,
     loading,
     error,
     refreshCourses: fetchCourses,
     refreshStudyPrograms: fetchStudyPrograms,
+    refreshPreferences: fetchPreferences,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

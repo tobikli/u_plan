@@ -53,6 +53,7 @@ export function CourseForm({ course }: { course: Course }) {
     loading: loadingPrograms,
     refreshStudyPrograms,
     refreshCourses,
+    preferences
   } = useData();
   const [programId, setProgramId] = useState(course.program_id);
   const router = useRouter();
@@ -249,8 +250,8 @@ export function CourseForm({ course }: { course: Course }) {
                 onChange={(e) => setGrade(e.target.value)}
                 type="number"
                 step="0.1"
-                min="1.0"
-                max="5.0"
+                min={preferences?.grade_min || 1.0}
+                max={preferences?.grade_max || 5.0}
               />
             </div>
             <div className="grid gap-3">

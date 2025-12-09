@@ -12,7 +12,6 @@ import Autoplay from "embla-carousel-autoplay";
 import Logo from "@/public/uplan.svg";
 import LightRays from "@/components/LightRays";
 import { useTheme } from "next-themes";
-import Link from "next/link";
 import { Footer } from "@/components/footer";
 
 export default function Home() {

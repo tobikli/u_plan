@@ -35,7 +35,7 @@ export function CourseForm({
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [programId, setProgramId] = useState("");
-  const { studyPrograms, loading: loadingPrograms } = useData();
+  const { studyPrograms, loading: loadingPrograms, preferences } = useData();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -187,8 +187,8 @@ export function CourseForm({
                 placeholder="1.0"
                 type="number"
                 step="0.1"
-                min="1.0"
-                max="5.0"
+                min={preferences?.grade_min || 1.0}
+                max={preferences?.grade_max || 5.0}
               />
             </div>
             <div className="grid gap-3">
