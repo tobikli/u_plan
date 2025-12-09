@@ -272,7 +272,7 @@ export default function Page() {
             <div className="flex flex-col items-center w-full max-w-[300px] mx-auto">
               <ChartContainer
                 config={progressConfig}
-                className="w-full aspect-square min-h-[250px]"
+                className="w-full aspect-square min-h-[200px]"
               >
                 <RadialBarChart
                   width={300}
@@ -309,7 +309,7 @@ export default function Page() {
             <div className="flex flex-col items-center w-full max-w-[300px] mx-auto">
               <ChartContainer
                 config={creditsConfig}
-                className="w-full aspect-square min-h-[250px]"
+                className="w-full aspect-square min-h-[200px]"
               >
                 <RadialBarChart
                   width={300}
@@ -352,57 +352,51 @@ export default function Page() {
             <CardTitle>Grades</CardTitle>
             <CardDescription>Average and distribution</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p className="text-sm text-muted-foreground">Avg grade</p>
-                <p className="text-2xl font-semibold">
-                  {stats.avgGrade ? stats.avgGrade.toFixed(2) : "—"}
-                </p>
-              </div>
-            </div>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-center justify-between text-foreground">
-                <span className="font-semibold">Best bucket</span>
-                <span>
-                  {gradeBands.find((g) => g.count > 0)?.label ?? "n/a"}
-                </span>
-              </div>
-              <Separator />
-              <p>Avg grade per semester</p>
-              <div className="w-full overflow-x-auto">
-                <ChartContainer config={gradesConfig} className="min-h-32">
-                  <LineChart
-                    data={gradeBySemester}
-                    margin={{ left: -10, right: 10, bottom: 4 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="semester"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={6}
-                    />
-                    <YAxis
-                      width={26}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={4}
-                      domain={[gradeBounds.min, gradeBounds.max]}
-                      allowDecimals={false}
-                    />
-                    <ChartTooltip
-                      content={<ChartTooltipContent indicator="line" />}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="grade"
-                      stroke="var(--color-count)"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                    />
-                  </LineChart>
-                </ChartContainer>
+          <CardContent className="grid">
+            <div className="w-full overflow-x-auto">
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between text-foreground">
+                  <span className="font-semibold">Best bucket</span>
+                  <span>
+                    {gradeBands.find((g) => g.count > 0)?.label ?? "n/a"}
+                  </span>
+                </div>
+                <Separator />
+                <p>Avg grade per semester</p>
+                <div className="w-full overflow-x-auto">
+                  <ChartContainer config={gradesConfig} className="min-h-32">
+                    <LineChart
+                      data={gradeBySemester}
+                      margin={{ left: -10, right: 10, bottom: 4 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="semester"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={6}
+                      />
+                      <YAxis
+                        width={26}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={4}
+                        domain={[gradeBounds.min, gradeBounds.max]}
+                        allowDecimals={false}
+                      />
+                      <ChartTooltip
+                        content={<ChartTooltipContent indicator="line" />}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="grade"
+                        stroke="var(--color-count)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -413,7 +407,7 @@ export default function Page() {
             <CardTitle>Credits over time</CardTitle>
             <CardDescription>When courses were added</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid">
             <div className="w-full overflow-x-auto">
               <div className="min-w-[360px]">
                 <ChartContainer config={creditsConfig} className="min-h-60">
@@ -452,53 +446,7 @@ export default function Page() {
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <Card className="w-full min-w-0 lg:col-span-7">
-          <CardHeader className="pb-3">
-            <CardTitle>Program completion</CardTitle>
-            <CardDescription>Credits earned per program</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="w-full overflow-x-auto">
-              <div className="min-w-[420px]">
-                <ChartContainer config={progressConfig} className="min-h-60">
-                  <BarChart
-                    data={programProgress}
-                    margin={{ left: -20, right: 10 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="name"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      height={60}
-                      interval={0}
-                      angle={0}
-                      dy={8}
-                    />
-                    <YAxis
-                      width={28}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={6}
-                    />
-                    <ChartTooltip
-                      cursor={{ fill: "hsl(var(--muted))" }}
-                      content={<ChartTooltipContent indicator="line" />}
-                    />
-                    <Bar
-                      dataKey="completion"
-                      radius={[8, 8, 4, 4]}
-                      fill="var(--color-completion)"
-                    />
-                  </BarChart>
-                </ChartContainer>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="flex gap-4 flex-col lg:flex-row lg:gap-6">
         <Card className="w-full min-w-0 lg:col-span-5">
           <CardHeader className="pb-2">
             <CardTitle>Grade distribution</CardTitle>
@@ -547,6 +495,51 @@ export default function Page() {
                 <p>
                   {stats.avgGrade ? stats.avgGrade.toFixed(2) : "No grades yet"}
                 </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="w-full max-w-svw min-w-0 lg:col-span-7">
+          <CardHeader className="pb-3">
+            <CardTitle>Program completion</CardTitle>
+            <CardDescription>Credits earned per program</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="w-full overflow-x-auto">
+              <div className="min-w-[420px]">
+                <ChartContainer config={progressConfig} className="min-h-60">
+                  <BarChart
+                    data={programProgress}
+                    margin={{ left: -20, right: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      height={60}
+                      interval={0}
+                      angle={0}
+                      dy={8}
+                    />
+                    <YAxis
+                      width={28}
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={6}
+                    />
+                    <ChartTooltip
+                      cursor={{ fill: "hsl(var(--muted))" }}
+                      content={<ChartTooltipContent indicator="line" />}
+                    />
+                    <Bar
+                      dataKey="completion"
+                      radius={[8, 8, 4, 4]}
+                      fill="var(--color-completion)"
+                    />
+                  </BarChart>
+                </ChartContainer>
               </div>
             </div>
           </CardContent>
