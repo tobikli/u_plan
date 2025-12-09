@@ -23,7 +23,7 @@ export default function Home() {
   const raysColor = resolvedTheme === "dark" ? "#7dd3fc" : "#ffffff";
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden">
       {/* Background Light Rays */}
       <div className="absolute inset-0 -z-10">
         <LightRays
