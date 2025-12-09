@@ -32,7 +32,22 @@ import { useData } from "@/lib/data-provider";
 import CenteredSpinner from "@/components/ui/centered-spinner";
 
 export default function Page() {
-  const { courses, studyPrograms, loading } = useData();
+  const { courses, studyPrograms, loading, preferences } = useData();
+
+  const gradeBounds = useMemo(() => {
+    const min = preferences?.grade_min ?? 1;
+    const max = preferences?.grade_max ?? 5;
+    const rawPassed = preferences?.grade_passed ?? 4;
+    const passed = Math.min(max, Math.max(min, rawPassed));
+    const span = Math.max(0.1, max - min);
+    return {
+      min,
+      max,
+      passed,
+      span,
+      clamp: (v: number) => Math.min(max, Math.max(min, v)),
+    };
+  }, [preferences]);
 
   const stats = useMemo(() => {
     const totalCourses = courses.length;
@@ -103,24 +118,26 @@ export default function Page() {
   }, [courses]);
 
   const gradeBands = useMemo(() => {
-    const buckets: Record<string, number> = {
-      "1.0-1.5": 0,
-      "1.6-2.0": 0,
-      "2.1-2.5": 0,
-      "2.6-3.0": 0,
-      "3.1-4.0": 0,
-    };
+    const { min, max } = gradeBounds;
+    const start = Math.floor(min);
+    const end = Math.ceil(max);
+    const buckets: { label: string; count: number }[] = [];
+
+    for (let g = start; g < end; g++) {
+      const lo = g;
+      const hi = g + 1;
+      buckets.push({ label: `${lo.toFixed(1)}-${hi.toFixed(1)}`, count: 0 });
+    }
+
     courses.forEach((c) => {
       if (typeof c.grade !== "number") return;
-      const g = c.grade;
-      if (g <= 1.5) buckets["1.0-1.5"] += 1;
-      else if (g <= 2.0) buckets["1.6-2.0"] += 1;
-      else if (g <= 2.5) buckets["2.1-2.5"] += 1;
-      else if (g <= 3.0) buckets["2.6-3.0"] += 1;
-      else buckets["3.1-4.0"] += 1;
+      const g = Math.min(max, Math.max(min, c.grade));
+      const idx = Math.min(buckets.length - 1, Math.floor(g - start));
+      buckets[idx].count += 1;
     });
-    return Object.entries(buckets).map(([band, count]) => ({ band, count }));
-  }, [courses]);
+
+    return buckets;
+  }, [courses, gradeBounds]);
 
   const completionRate = useMemo(() => {
     const completed = courses.filter((c) => c.finished).length;
@@ -150,15 +167,6 @@ export default function Page() {
     const earned = stats.creditsEarned || 0;
     return planned ? Math.min(100, Math.round((earned / planned) * 100)) : 0;
   }, [stats.creditsEarned, stats.creditsPlanned]);
-
-  const gradeScore = useMemo(() => {
-    if (!stats.avgGrade) return 0;
-    // Map 1.0 (best) -> 100, 4.0 (worst) -> 0
-    return Math.max(
-      0,
-      Math.min(100, Math.round(((4 - stats.avgGrade) / 3) * 100))
-    );
-  }, [stats.avgGrade]);
 
   const summaryCards = [
     {
@@ -357,7 +365,7 @@ export default function Page() {
               <div className="flex items-center justify-between text-foreground">
                 <span className="font-semibold">Best bucket</span>
                 <span>
-                  {gradeBands.find((g) => g.count > 0)?.band ?? "n/a"}
+                  {gradeBands.find((g) => g.count > 0)?.label ?? "n/a"}
                 </span>
               </div>
               <Separator />
@@ -380,7 +388,7 @@ export default function Page() {
                       tickLine={false}
                       axisLine={false}
                       tickMargin={4}
-                      domain={[1, 4]}
+                      domain={[gradeBounds.min, gradeBounds.max]}
                       allowDecimals={false}
                     />
                     <ChartTooltip
@@ -503,7 +511,7 @@ export default function Page() {
                   <BarChart data={gradeBands} margin={{ left: -10, right: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
-                      dataKey="band"
+                      dataKey="label"
                       tickLine={false}
                       axisLine={false}
                       tickMargin={8}

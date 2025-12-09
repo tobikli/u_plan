@@ -211,7 +211,7 @@ const saveCourses = async () => {
         <Card>
           <CardHeader>
             <CardTitle>Courses</CardTitle>
-            <CardDescription>Preferences for your courses.</CardDescription>
+            <CardDescription>Preferences for your courses. (Changing this after adding courses can break statistics!)</CardDescription>
             <CardAction>
               <Button onClick={saveCourses} variant="outline">
                 Save
