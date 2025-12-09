@@ -1,6 +1,25 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/**
+ * Updates the session for a Next.js middleware request.
+ * This function creates a Supabase client for middleware use and handles
+ * authentication state, redirecting unauthenticated users from protected routes.
+ * 
+ * **Important**: With Fluid compute, don't store the client in a global variable.
+ * Always create a new client on each request.
+ * 
+ * @param request - The Next.js request object
+ * @returns A NextResponse with updated cookies and potential redirect
+ * 
+ * @example
+ * ```ts
+ * // In middleware.ts
+ * export async function middleware(request: NextRequest) {
+ *   return await updateSession(request);
+ * }
+ * ```
+ */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,

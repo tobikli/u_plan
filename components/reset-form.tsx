@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,10 +23,7 @@ export function ResetForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [loading, setLoading] = useState(false);
-
   async function handleSubmit(formData: FormData) {
-    setLoading(true);
     try {
       const { error } = await resetPassword(formData);
       if (error) {
@@ -41,8 +37,6 @@ export function ResetForm({
         err instanceof Error ? err.message : "An error occurred";
       toast(errorMessage);
       console.error("Signup error:", errorMessage);
-    } finally {
-      setLoading(false);
     }
   }
   return (

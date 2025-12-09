@@ -44,9 +44,6 @@ export function NavUser({
     router.refresh();
   };
 
-  const account = async () => {
-    router.push("/app/account");
-  };
   return (
     <SidebarMenu>
       <SidebarMenuItem>

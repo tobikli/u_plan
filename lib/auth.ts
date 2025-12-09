@@ -2,6 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Server action to sign up a new user.
+ * 
+ * @param formData - Form data containing email, password, and name
+ * @returns The created user data or error
+ */
 export async function signUpNewUser(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -21,6 +27,12 @@ export async function signUpNewUser(formData: FormData) {
   return { data, error };
 }
 
+/**
+ * Server action to sign in an existing user.
+ * 
+ * @param formData - Form data containing email and password
+ * @returns The signed in user data or error
+ */
 export async function signInUser(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -33,12 +45,24 @@ export async function signInUser(formData: FormData) {
   return { data, error };
 }
 
+/**
+ * Server action to sign out the current user.
+ * 
+ * @returns Error if sign out failed, or success
+ */
 export async function signOutUser() {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut();
   return { error };
 }
 
+/**
+ * Server action to reset a user's password.
+ * Sends a password reset email to the specified address.
+ * 
+ * @param formData - Form data containing the user's email
+ * @returns Success data or error
+ */
 export async function resetPassword(formData: FormData) {
   const email = formData.get("email") as string;
 
@@ -52,6 +76,11 @@ export async function resetPassword(formData: FormData) {
   return { data, error };
 }
 
+/**
+ * Server action to get the currently authenticated user.
+ * 
+ * @returns The current user or error
+ */
 export async function getCurrentUser() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();

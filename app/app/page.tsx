@@ -151,15 +151,6 @@ export default function Page() {
     return planned ? Math.min(100, Math.round((earned / planned) * 100)) : 0;
   }, [stats.creditsEarned, stats.creditsPlanned]);
 
-  const gradeScore = useMemo(() => {
-    if (!stats.avgGrade) return 0;
-    // Map 1.0 (best) -> 100, 4.0 (worst) -> 0
-    return Math.max(
-      0,
-      Math.min(100, Math.round(((4 - stats.avgGrade) / 3) * 100))
-    );
-  }, [stats.avgGrade]);
-
   const summaryCards = [
     {
       label: "Programs",
