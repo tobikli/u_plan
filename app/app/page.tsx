@@ -29,6 +29,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useData } from "@/lib/data-provider";
+import CenteredSpinner from "@/components/ui/centered-spinner";
 
 export default function Page() {
   const { courses, studyPrograms, loading } = useData();
@@ -218,6 +219,8 @@ export default function Page() {
       color: "var(--chart-color)",
     },
   };
+
+  if (loading) return <CenteredSpinner />;
 
   return (
     <div className="grid gap-4 pb-6 lg:gap-6 p-5">

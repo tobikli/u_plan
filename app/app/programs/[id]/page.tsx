@@ -14,6 +14,28 @@ import { Button } from "@/components/ui/button";
 import { IconPlus, IconMinus } from "@tabler/icons-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 function Info({ label, value }: { label: string; value: string | number }) {
   return (
@@ -40,7 +62,15 @@ export default function StudyDetail() {
   );
 
   const currentCredits = useMemo(
-    () => programCourses.reduce((sum, course) => sum + course.credits, 0),
+    () =>
+      programCourses
+        .filter(
+          (course) =>
+            course.grade !== null &&
+            course.credits > 0 &&
+            course.finished
+        )
+        .reduce((sum, course) => sum + course.credits, 0),
     [programCourses]
   );
 
@@ -75,6 +105,58 @@ export default function StudyDetail() {
     return totalWeightedGrades / totalCredits;
   }, [programCourses, preferences, loading]);
 
+  const gradeBySemester = useMemo(() => {
+    const bySem = new Map<number, { sum: number; credits: number }>();
+    programCourses.forEach((course) => {
+      if (
+        course.grade === null ||
+        course.grade === undefined ||
+        !course.semesters ||
+        course.credits <= 0
+      ) {
+        return;
+      }
+      const current = bySem.get(course.semesters) || { sum: 0, credits: 0 };
+      current.sum += course.grade * course.credits;
+      current.credits += course.credits;
+      bySem.set(course.semesters, current);
+    });
+
+    return Array.from(bySem.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([semester, { sum, credits }]) => ({
+        semester,
+        average: credits > 0 ? Number((sum / credits).toFixed(2)) : null,
+      }));
+  }, [programCourses]);
+
+  const gradeDistribution = useMemo(() => {
+    const counts = new Map<string, number>();
+    programCourses.forEach((course) => {
+      if (course.grade === null || course.grade === undefined) return;
+      const key = course.grade.toFixed(1);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    return Array.from(counts.entries())
+      .map(([grade, count]) => ({ grade, count }))
+      .sort((a, b) => Number(a.grade) - Number(b.grade));
+  }, [programCourses]);
+
+  const gradeBySemesterConfig: ChartConfig = {
+    average: {
+      label: "Avg grade",
+      color: "var(--chart-color)",
+    },
+  };
+
+  const gradeDistributionConfig: ChartConfig = {
+    count: {
+      label: "Courses",
+      color: "var(--chart-color)",
+    },
+  };
+
   if (loading) {
     return <CenteredSpinner />;
   }
@@ -106,6 +188,26 @@ export default function StudyDetail() {
         toast.error(error.message ?? "Failed to update program status");
         return;
       }
+    };
+    updateProgram();
+  }
+
+  if (currentCredits < program.credits && program.finished) {
+    const updateProgram = async () => {
+      const supabase = createClient();
+      const { data: userResult, error: userError } =
+        await supabase.auth.getUser();
+      if (userError || !userResult.user) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      await supabase
+        .from("study_programs")
+        .update({ finished: false })
+        .eq("user_id", userResult.user.id)
+        .eq("id", program!.id);
+
     };
     updateProgram();
   }
@@ -215,6 +317,90 @@ export default function StudyDetail() {
         <p className="text-center p-3 align-middle text-2xl font-semibold flex items-center justify-center">
           {averageGrade?.toFixed(2)}
         </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="h-full bg-black/0">
+          <CardHeader className="pb-2">
+            <CardTitle>Average grade per semester</CardTitle>
+            <CardDescription>Weighted by credits</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {gradeBySemester.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No graded courses yet.</p>
+            ) : (
+              <ChartContainer
+                config={gradeBySemesterConfig}
+                className="w-full h-[260px]"
+              >
+                <LineChart data={gradeBySemester}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="semester"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    domain={[1, 5]}
+                    tickCount={5}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line
+                    type="monotone"
+                    dataKey="average"
+                    stroke="var(--color-average)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--color-average)" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="h-full bg-black/0">
+          <CardHeader className="pb-2">
+            <CardTitle>Grade distribution</CardTitle>
+            <CardDescription>Count of graded courses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {gradeDistribution.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No grades recorded yet.</p>
+            ) : (
+              <ChartContainer
+                config={gradeDistributionConfig}
+                className="w-full h-[260px] "
+              >
+                <BarChart data={gradeDistribution}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="grade"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar
+                    dataKey="count"
+                    fill="var(--color-count)"
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ChartContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
       {program.description && (
         <div className="space-y-2">
