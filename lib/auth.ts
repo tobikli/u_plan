@@ -13,7 +13,7 @@ export async function signUpNewUser(formData: FormData) {
     password,
     options: {
       emailRedirectTo: `${
-        process.env.BASE_URL || "http://localhost:3000"
+        process.env.SITE_URL || "http://localhost:3000"
       }`,
       data: { name },
     },
@@ -45,7 +45,7 @@ export async function resetPassword(formData: FormData) {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${
-      process.env.BASE_URL || "http://localhost:3000"
+      process.env.SITE_URL || "http://localhost:3000"
     }`,
   });
   console.log("Reset password data:", data);

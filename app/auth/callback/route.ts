@@ -1,34 +1,41 @@
 import { NextResponse } from 'next/server'
-// The client you created from the Server-Side Auth instructions
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const url = new URL(request.url)
+  const searchParams = url.searchParams
+
   const code = searchParams.get('code')
-  // if "next" is in param, use it as the redirect URL
   let next = searchParams.get('next') ?? '/'
-  if (!next.startsWith('/')) {
-    // if "next" is not a relative URL, use the default
-    next = '/'
-  }
+
+  // Ensure "next" is always a relative path
+  if (!next.startsWith('/')) next = '/'
+
+  // ---- Determine the correct public origin ----
+  const forwardedHost =
+    request.headers.get('x-forwarded-host') ??
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/^https?:\/\//, '')
+
+  const proto =
+    request.headers.get('x-forwarded-proto') ?? 'https'
+
+  // Fallback only if no forwardedHost is available
+  const externalHost = forwardedHost || url.host
+
+  const publicOrigin = `${proto}://${externalHost}`
+
+  // ---------------------------------------------
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+
     if (!error) {
-      const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
-      const isLocalEnv = process.env.NODE_ENV === 'development'
-      if (isLocalEnv) {
-        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-        return NextResponse.redirect(`${origin}${next}`)
-      } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
-      }
+      // Always redirect using the REAL public origin
+      return NextResponse.redirect(`${publicOrigin}${next}`)
     }
   }
 
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  // Error case → use the correct public origin as well
+  return NextResponse.redirect(`${publicOrigin}/auth/auth-code-error`)
 }
