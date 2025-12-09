@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import type { StudyProgram } from "@/types/study-program";
 import { useData } from "@/lib/data-provider";
 import { CourseForm } from "./course-form";
@@ -21,7 +21,6 @@ function Info({ label, value }: { label: string; value: string | number }) {
 
 export default function StudyDetail() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
   const { studyPrograms, courses, loading } = useData();
 
   const course = useMemo(

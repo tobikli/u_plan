@@ -215,7 +215,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.removeChannel(preferencesChannel);
       }
     };
-  }, [supabase, fetchCourses, fetchStudyPrograms]);
+  }, [supabase, fetchCourses, fetchStudyPrograms, fetchPreferences]);
 
   const value: DataContextType = {
     courses,

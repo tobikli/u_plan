@@ -1,3 +1,2 @@
-export function capitalizeFirstLetter(val: string) {
-    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
-}
+// Re-export utilities from lib/utils to maintain backward compatibility
+export { capitalizeFirstLetter } from "@/lib/utils";
