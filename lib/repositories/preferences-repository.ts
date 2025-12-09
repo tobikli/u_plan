@@ -44,7 +44,7 @@ export class PreferencesRepository extends BaseRepository<Preferences> {
 
   /**
    * Creates or updates preferences for the current user.
-   * @param preferences - The preferences to save
+   * @param preferences - The preferences to save (user_id will be set automatically)
    * @returns The saved preferences or error
    */
   async upsert(preferences: Partial<Preferences>): Promise<{ data: Preferences | null; error: Error | null }> {
@@ -54,9 +54,13 @@ export class PreferencesRepository extends BaseRepository<Preferences> {
         return { data: null, error: new Error("User not authenticated") };
       }
 
+      // Remove user_id if present in preferences to prevent manipulation
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { user_id: _userId, ...sanitizedPreferences } = preferences as Partial<Preferences> & { user_id?: string };
+
       const { data, error } = await this.client
         .from(this.tableName)
-        .upsert({ ...preferences, user_id: userId })
+        .upsert({ ...sanitizedPreferences, user_id: userId })
         .select()
         .single();
 

@@ -25,7 +25,10 @@ export function createAdminClient() {
   const serviceRoleKey = process.env.SERVICE_ROLE_KEY;
 
   if (!url || !serviceRoleKey) {
-    throw new Error("Missing required environment variables for admin client");
+    const missing = [];
+    if (!url) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+    if (!serviceRoleKey) missing.push("SERVICE_ROLE_KEY");
+    throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
   }
 
   return createClient(url, serviceRoleKey, {

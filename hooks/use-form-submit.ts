@@ -21,15 +21,16 @@ interface UseFormOptions<T> {
  * This follows the Hook pattern to encapsulate form submission logic.
  * 
  * @template T - The type of data returned on successful submission
- * @param submitFn - The async function to call when the form is submitted
+ * @param submitFn - The async function to call when the form is submitted (receives FormData)
  * @param options - Optional callbacks for success and error handling
  * @returns Form state and submission handler
  * 
  * @example
  * ```tsx
  * const { isSubmitting, error, handleSubmit } = useFormSubmit(
- *   async (data) => {
- *     const result = await api.createUser(data);
+ *   async (formData) => {
+ *     const name = formData.get('name');
+ *     const result = await api.createUser({ name });
  *     return result;
  *   },
  *   {
@@ -40,7 +41,7 @@ interface UseFormOptions<T> {
  * ```
  */
 export function useFormSubmit<T = unknown>(
-  submitFn: (data: FormData | Record<string, unknown>) => Promise<T>,
+  submitFn: (data: FormData) => Promise<T>,
   options: UseFormOptions<T> = {}
 ) {
   const [state, setState] = useState<FormState>({

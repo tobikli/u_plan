@@ -87,7 +87,7 @@ export abstract class BaseRepository<T> {
 
   /**
    * Creates a new record.
-   * @param data - The data to insert
+   * @param data - The data to insert (user_id will be set automatically)
    * @returns The created record or error
    */
   async create(data: Partial<T>): Promise<{ data: T | null; error: Error | null }> {
@@ -97,9 +97,13 @@ export abstract class BaseRepository<T> {
         return { data: null, error: new Error("User not authenticated") };
       }
 
+      // Remove user_id if present in data to prevent manipulation
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { user_id: _userId, ...sanitizedData } = data as Partial<T> & { user_id?: string };
+
       const { data: result, error } = await this.client
         .from(this.tableName)
-        .insert({ ...data, user_id: userId })
+        .insert({ ...sanitizedData, user_id: userId })
         .select()
         .single();
 
