@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import CenteredSpinner from "@/components/ui/centered-spinner";
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 export default function Page() {
   const [email, setEmail] = useState<string>("");
   const [name, setName] = useState<string>("");
@@ -130,7 +132,7 @@ const saveCourses = async () => {
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Manage your account, theme, and session.
+          Manage your account, theme, and other settings.
         </p>
       </div>
 
