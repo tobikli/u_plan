@@ -60,7 +60,7 @@ export function LoginForm({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${process.env.BASE_URL || "http://localhost:3000"
+          redirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
           }/auth/callback?next=/app`,
         },
       });
