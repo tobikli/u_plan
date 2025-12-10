@@ -41,9 +41,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           userName={displayName}
           userAvatar={gravatarUrl}
         />
-        <SidebarInset>
+        <SidebarInset className="overflow-x-hidden">
           <SiteHeader />
-          {children}
+          <main className="overflow-x-hidden max-w-full">
+            {children}
+          </main>
         </SidebarInset>
       </SidebarProvider>
     </DataProvider>

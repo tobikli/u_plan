@@ -231,7 +231,7 @@ export default function Page() {
   if (loading) return <CenteredSpinner />;
 
   return (
-    <div className="grid gap-4 pb-6 lg:gap-6 p-5">
+    <div className="grid gap-4 pb-6 lg:gap-6 p-5 max-w-full overflow-x-hidden">
       <div className="flex items-baseline justify-between">
         <div>
           <p className="text-sm text-muted-foreground">Overview</p>
@@ -240,11 +240,11 @@ export default function Page() {
         <Badge variant="outline">Live</Badge>
       </div>
 
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
         {summaryCards.map((card) => (
           <Card
             key={card.label}
-            className="w-full min-w-0 bg-linear-to-b from-muted/50 to-background border-border/60"
+            className="w-full min-w-20 bg-linear-to-b from-muted/50 to-background border-border/60"
           >
             <CardHeader className="pb-2">
               <CardDescription>{card.label}</CardDescription>
@@ -262,14 +262,14 @@ export default function Page() {
       <hr />
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-        <Card className="w-full min-w-0 h-full grid grid-rows-[auto_1fr]">
+        <Card className="w-full min-w-0 h-full grid grid-rows-[auto_1fr] overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle>Completion & credits</CardTitle>
             <CardDescription>Overall course progress</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 sm:grid-cols-2 overflow-x-auto">
             {/* Completion chart */}
-            <div className="flex flex-col items-center w-full max-w-[300px] mx-auto">
+            <div className="flex flex-col items-center w-full max-w-full mx-auto">
               <ChartContainer
                 config={progressConfig}
                 className="w-full aspect-square min-h-[200px]"
@@ -306,7 +306,7 @@ export default function Page() {
             </div>
 
             {/* Credits chart */}
-            <div className="flex flex-col items-center w-full max-w-[300px] mx-auto">
+            <div className="flex flex-col items-center w-full max-w-full mx-auto">
               <ChartContainer
                 config={creditsConfig}
                 className="w-full aspect-square min-h-[200px]"
@@ -347,12 +347,12 @@ export default function Page() {
           </CardContent>
         </Card>
 
-        <Card className="w-full min-w-0 h-full grid grid-rows-[auto_1fr]">
+        <Card className="w-full min-w-0 h-full grid grid-rows-[auto_1fr] overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle>Grades</CardTitle>
             <CardDescription>Average and distribution</CardDescription>
           </CardHeader>
-          <CardContent className="grid">
+          <CardContent className="grid overflow-x-auto">
             <div className="w-full overflow-x-auto">
               <div className="space-y-3 text-sm text-muted-foreground">
                 <div className="flex items-center justify-between text-foreground">
@@ -402,12 +402,12 @@ export default function Page() {
           </CardContent>
         </Card>
 
-        <Card className="w-full min-w-0 h-full grid grid-rows-[auto_1fr] lg:col-span-2">
+        <Card className="w-full min-w-0 h-full grid grid-rows-[auto_1fr] lg:col-span-2 overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle>Credits over time</CardTitle>
             <CardDescription>When courses were added</CardDescription>
           </CardHeader>
-          <CardContent className="grid">
+          <CardContent className="grid overflow-x-auto">
             <div className="w-full overflow-x-auto">
               <div className="min-w-[360px]">
                 <ChartContainer config={creditsConfig} className="min-h-60">
@@ -446,13 +446,13 @@ export default function Page() {
         </Card>
       </div>
 
-      <div className="flex gap-4 flex-col lg:flex-row lg:gap-6">
-        <Card className="w-full min-w-0 lg:col-span-5">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-12 lg:gap-6">
+        <Card className="w-full min-w-0 lg:col-span-5 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle>Grade distribution</CardTitle>
             <CardDescription>Across all graded courses</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 overflow-x-auto">
             <div className="w-full overflow-x-auto">
               <div className="min-w-[360px]">
                 <ChartContainer config={gradesConfig} className="min-h-60">
@@ -499,12 +499,12 @@ export default function Page() {
             </div>
           </CardContent>
         </Card>
-        <Card className="w-full max-w-svw min-w-0 lg:col-span-7">
+        <Card className="w-full min-w-0 lg:col-span-7 overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle>Program completion</CardTitle>
             <CardDescription>Credits earned per program</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             <div className="w-full overflow-x-auto">
               <div className="min-w-[420px]">
                 <ChartContainer config={progressConfig} className="min-h-60">

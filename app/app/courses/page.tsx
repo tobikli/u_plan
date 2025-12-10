@@ -44,7 +44,9 @@ export default function Page() {
     const term = search.trim().toLowerCase();
     const filtered = term
       ? coursesWithProgram.filter((c) => {
-          const tagMatch = (c.tags || []).some((t) => t.toLowerCase().includes(term));
+          const tagMatch = (c.tags || []).some((t) =>
+            t.toLowerCase().includes(term)
+          );
           const textMatch = [c.name, c.course_code, c.program_name]
             .filter(Boolean)
             .some((v) => v!.toLowerCase().includes(term));
@@ -65,7 +67,7 @@ export default function Page() {
               ? Infinity
               : c.grade;
           case "tags":
-            return (c.tags && c.tags.length > 0)
+            return c.tags && c.tags.length > 0
               ? c.tags.join(", ").toLowerCase()
               : "";
           case "name":
@@ -108,7 +110,7 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-4 m-10">
+    <div className="space-y-4 p-5 max-w-full overflow-x-hidden">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold w-full">Courses</h1>
@@ -118,12 +120,11 @@ export default function Page() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, code, program, tag"
-            className="w-full"
+            className="w-full max-w-full"
           />
         </div>
       </div>
-      <div className="flex gap-3 justify-right">
-        <span className="w-full"></span>
+      <div className="flex flex-wrap gap-3 justify-end">
         <Select
           value={sortKey}
           onValueChange={(v) => setSortKey(v as typeof sortKey)}
@@ -137,7 +138,6 @@ export default function Page() {
             <SelectItem value="credits">Credits</SelectItem>
             <SelectItem value="grade">Grade</SelectItem>
             <SelectItem value="tags">Tags</SelectItem>
-            
           </SelectContent>
         </Select>
         <Select
@@ -164,11 +164,13 @@ export default function Page() {
         </Button>
         <CourseForm />
       </div>
-      <CourseTable
-        columns={columns}
-        data={filteredAndSorted}
-        getRowHref={(course) => `/app/courses/${course.id}`}
-      />{" "}
+      <div className="w-full overflow-x-auto">
+        <CourseTable
+          columns={columns}
+          data={filteredAndSorted}
+          getRowHref={(course) => `/app/courses/${course.id}`}
+        />
+      </div>
     </div>
   );
 }
