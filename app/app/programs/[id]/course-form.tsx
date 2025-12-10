@@ -204,7 +204,7 @@ export function CourseForm(program: { program: StudyProgram }) {
               </Button>
             </DialogClose>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Program"}
+              {submitting ? "Saving..." : "Save Course"}
             </Button>
           </DialogFooter>
         </form>
