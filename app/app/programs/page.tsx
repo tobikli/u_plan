@@ -44,7 +44,7 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-4 m-10">
+    <div className="space-y-4 p-5">
       <div className="flex">
         <h1 className="w-full text-xl font-semibold">Study Programs</h1>
         <StudyForm />

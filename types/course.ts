@@ -11,5 +11,6 @@ export type Course = {
   user_id: string
   created_at: string
   updated_at?: string | null
+  editor_state?: unknown | null
 }
 

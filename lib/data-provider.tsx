@@ -41,7 +41,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase
         .from("courses")
-        .select("*")
+        .select(
+          "id, course_code, name, credits, grade, program_id, semesters, finished, tags, user_id, created_at, updated_at"
+        )
         .eq("user_id", userData.user.id)
         .order("created_at", { ascending: false });
 
@@ -215,7 +217,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.removeChannel(preferencesChannel);
       }
     };
-  }, [supabase, fetchCourses, fetchStudyPrograms]);
+  }, [supabase, fetchCourses, fetchStudyPrograms, fetchPreferences]);
 
   const value: DataContextType = {
     courses,
