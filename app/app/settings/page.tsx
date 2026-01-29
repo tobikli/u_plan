@@ -220,7 +220,7 @@ const saveCourses = async () => {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <div className="flex justify-between">
-              <Label htmlFor="gradeMin">Minimum Grade</Label>
+              <Label htmlFor="gradeMin">Best Grade</Label>
               <Input
                 id="gradeMin"
                 type="number"
@@ -231,7 +231,7 @@ const saveCourses = async () => {
               />
             </div>
             <div className="flex justify-between">
-              <Label htmlFor="gradeMax">Maximum Grade</Label>
+              <Label htmlFor="gradeMax">Worst Grade</Label>
               <Input
                 id="gradeMax"
                 type="number"
