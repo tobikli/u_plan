@@ -10,6 +10,9 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
+  images: {
+    remotePatterns: [new URL("https://static.twks.net/**")],
+  },
   turbopack: {
     rules: {
       "*.svg": {

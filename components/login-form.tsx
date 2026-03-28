@@ -19,6 +19,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import Logo from "@/public/uplan.svg";
 import { Separator } from "./ui/separator";
+import Image from "next/image";
 
 export function LoginForm({
   className,
@@ -43,7 +44,7 @@ export function LoginForm({
       });
       if (error) throw error;
       toast.success(
-        "Welcome back, " + data.user.user_metadata.name || "" + "!"
+        "Welcome back, " + data.user.user_metadata.name || "" + "!",
       );
       router.push("/app");
     } catch (error: unknown) {
@@ -63,6 +64,28 @@ export function LoginForm({
           : process.env.NEXT_PUBLIC_SITE_URL;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
+        options: {
+          redirectTo: `${origin}/auth/callback?next=/app`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+      setIsLoading(false);
+    }
+  };
+
+  const handleTWKSLogin = async () => {
+    const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const origin =
+        typeof window !== "undefined"
+          ? process.env.NEXT_PUBLIC_SITE_URL
+          : process.env.NEXT_PUBLIC_SITE_URL;
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'custom:twks',
         options: {
           redirectTo: `${origin}/auth/callback?next=/app`,
         },
@@ -119,7 +142,11 @@ export function LoginForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full hover:cursor-pointer"
+                disabled={isLoading}
+              >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </div>
@@ -132,10 +159,25 @@ export function LoginForm({
               onClick={handleGoogleLogin}
               variant="outline"
               type="button"
-              className="w-full"
+              className="w-full hover:cursor-pointer"
             >
               <IconBrandGoogle />
               Login with Google
+            </Button>
+            <Button
+              onClick={handleTWKSLogin}
+              variant="outline"
+              type="button"
+              className="w-full mt-4 hover:cursor-pointer"
+            >
+              <Image
+                src="https://static.twks.net/images/twks.png"
+                alt=""
+                width={12}
+                height={12}
+                className="size-5 mr-2"
+              />
+              Login with TWKS
             </Button>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
