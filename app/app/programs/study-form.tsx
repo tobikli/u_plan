@@ -108,7 +108,7 @@ export function StudyForm() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">New Study Program</Button>
+        <Button variant="outline" className="hover:cursor-pointer">New Study Program</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">
@@ -126,7 +126,7 @@ export function StudyForm() {
                 <DegreeDrop
                   value={degree}
                   onChange={setDegree}
-                  className="w-full"
+                  className="w-full hover:cursor-pointer"
                 />
               </div>
               <div className="grid gap-3">
@@ -172,11 +172,11 @@ export function StudyForm() {
           <DialogFooter>
             
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" className="hover:cursor-pointer">
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
               {submitting ? "Saving..." : "Save Program"}
             </Button>
           </DialogFooter>

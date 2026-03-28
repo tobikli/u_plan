@@ -54,7 +54,7 @@ export function NavUser({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:cursor-pointer"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
                 <AvatarImage src={user.avatar} alt={user.name} />
@@ -95,6 +95,7 @@ export function NavUser({
                 trigger={
                   <DropdownMenuItem
                     onSelect={(e) => e.preventDefault()}
+                    className="hover:cursor-pointer"
                   >
                     <IconUserCircle />
                     <span className="ml-2">Account</span>
@@ -109,6 +110,7 @@ export function NavUser({
                 e.preventDefault();
                 void handleLogout();
               }}
+              className="hover:cursor-pointer"
             >
               <IconLogout />
               <span className="ml-2">Log out</span>

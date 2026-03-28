@@ -154,7 +154,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit Study Program</Button>
+        <Button variant="outline" className="hover:cursor-pointer">Edit Study Program</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">
@@ -169,7 +169,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
                 <DegreeDrop
                   value={degree}
                   onChange={setDegree}
-                  className="w-full"
+                  className="w-full hover:cursor-pointer"
                 />
               </div>
               <div className="grid gap-3">
@@ -225,7 +225,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
               <AlertDialogTrigger asChild>
                 <Button
                   type="button"
-                  className="bg-red-500 hover:bg-red-700 text-white"
+                  className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
                 >
                   Delete Program
                 </Button>
@@ -241,7 +241,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    className="bg-red-500 hover:bg-red-700 text-white"
+                    className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
                     onClick={handleStudyDelete}
                     disabled={deleting}
                   >
@@ -253,11 +253,11 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
             <span className="w-full"></span>
 
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" className="hover:cursor-pointer">
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
               {submitting ? "Saving..." : "Save Program"}
             </Button>
           </DialogFooter>

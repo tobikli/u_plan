@@ -271,7 +271,7 @@ export default function StudyDetail() {
             <div className=" flex gap-2">
               <Button
                 onClick={decreaseSemester}
-                className="size-7"
+                className="size-7 hover:cursor-pointer"
                 variant="outline"
                 disabled={program.current_semester <= 1}
               >
@@ -279,7 +279,7 @@ export default function StudyDetail() {
               </Button>
               <Button
                 onClick={increaseSemester}
-                className="size-7"
+                className="size-7 hover:cursor-pointer"
                 variant="outline"
                 disabled={program.current_semester >= program.semesters}
               >

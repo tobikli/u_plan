@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, ReadonlyURLSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,7 @@ function extractParams(params: URLSearchParams | ReadonlyURLSearchParams): AuthE
   };
 }
 
-export default function AuthCodeErrorPage() {
+function AuthCodeErrorContent() {
   const queryParams = useSearchParams();
   const [hashParams, setHashParams] = useState<AuthErrorState>({});
 
@@ -75,5 +75,28 @@ export default function AuthCodeErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthCodeErrorPage() {
+  return (
+    <Suspense
+      fallback={(
+        <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
+          <div className="w-full max-w-sm">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Authentication error</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>Loading error details...</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+    >
+      <AuthCodeErrorContent />
+    </Suspense>
   );
 }

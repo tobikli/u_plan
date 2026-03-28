@@ -117,7 +117,7 @@ export function CourseForm(program: { program: StudyProgram }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="size-8" variant="outline">
+        <Button className="size-8 hover:cursor-pointer" variant="outline">
           <IconPlus />
         </Button>
       </DialogTrigger>
@@ -192,18 +192,18 @@ export function CourseForm(program: { program: StudyProgram }) {
               placeholder="Press Enter to add tag"
             />
             <div className="flex items-center gap-3 my-2">
-              <Checkbox id="finished" name="finished" />
+              <Checkbox id="finished" name="finished" className="hover:cursor-pointer" />
               <Label htmlFor="finished">Finished?</Label>
             </div>
           </div>
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" className="hover:cursor-pointer">
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
               {submitting ? "Saving..." : "Save Course"}
             </Button>
           </DialogFooter>

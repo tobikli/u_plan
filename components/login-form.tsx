@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import Logo from "@/public/uplan.svg";
 import { Separator } from "./ui/separator";
 import Image from "next/image";
+import { Provider } from "@supabase/supabase-js";
 
 export function LoginForm({
   className,
@@ -85,7 +86,7 @@ export function LoginForm({
           ? process.env.NEXT_PUBLIC_SITE_URL
           : process.env.NEXT_PUBLIC_SITE_URL;
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'custom:twks',
+        provider: 'custom:twks' as Provider,
         options: {
           redirectTo: `${origin}/auth/callback?next=/app`,
         },

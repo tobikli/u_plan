@@ -134,7 +134,7 @@ export function CourseForm({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant="outline">
+          <Button variant="outline" className="hover:cursor-pointer">
             <IconPlus />
           </Button>
         )}

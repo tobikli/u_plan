@@ -144,7 +144,7 @@ const saveCourses = async () => {
               Update your profile and credentials.
             </CardDescription>
             <CardAction>
-              <AccountForm trigger={<Button variant="outline">Edit</Button>} />
+              <AccountForm trigger={<Button variant="outline" className="hover:cursor-pointer">Edit</Button>} />
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
@@ -162,7 +162,7 @@ const saveCourses = async () => {
                 {createdAt ? new Date(createdAt).toLocaleDateString() : "-"}
               </span>
             </div>
-            <Button asChild variant="link" className="px-0 text-primary">
+            <Button asChild variant="link" className="px-0 text-primary hover:cursor-pointer">
               <a href="/auth/update-password">Update password</a>
             </Button>
           </CardContent>
@@ -190,7 +190,7 @@ const saveCourses = async () => {
               Preferences for your study programs.
             </CardDescription>
             <CardAction>
-              <Button onClick={saveProgram} variant="outline">
+              <Button onClick={saveProgram} variant="outline" className="hover:cursor-pointer">
                 Save
               </Button>
             </CardAction>
@@ -200,6 +200,7 @@ const saveCourses = async () => {
               <Checkbox
                 checked={gradeIncludeFailed}
                 onCheckedChange={(checked) => setGradeIncludeFailed(!!checked)}
+                className="hover:cursor-pointer"
               />
               <Label htmlFor="gradeIncludeFailed">
                 Include failed courses in GPA calculation
@@ -213,7 +214,7 @@ const saveCourses = async () => {
             <CardTitle>Courses</CardTitle>
             <CardDescription>Preferences for your courses. (Changing this after adding courses can break statistics!)</CardDescription>
             <CardAction>
-              <Button onClick={saveCourses} variant="outline">
+              <Button onClick={saveCourses} variant="outline" className="hover:cursor-pointer">
                 Save
               </Button>
             </CardAction>

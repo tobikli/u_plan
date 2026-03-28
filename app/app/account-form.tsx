@@ -180,7 +180,7 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
               <AlertDialogTrigger asChild>
                 <Button
                   type="button"
-                  className="bg-red-500 hover:bg-red-700 text-white"
+                  className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
                 >
                   Delete Account
                 </Button>
@@ -208,11 +208,11 @@ export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
 
             <span className="w-full"></span>
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" className="hover:cursor-pointer">
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
               {submitting ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>

@@ -272,7 +272,7 @@ export default function StudyDetail() {
       </div>
       <h2 className="text-lg font-semibold">Course Notes</h2>
       <div className="flex items-center gap-3">
-        <Button onClick={handleSaveNotes} disabled={saving || notesLoading}>
+        <Button onClick={handleSaveNotes} disabled={saving || notesLoading} className="hover:cursor-pointer">
           {notesLoading ? "Loading notes..." : saving ? "Saving..." : "Save Notes"}
         </Button>
         <p className="text-sm text-muted-foreground">Notes are saved to this course.</p>

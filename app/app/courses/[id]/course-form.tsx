@@ -189,7 +189,7 @@ export function CourseForm({ course }: { course: Course }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Edit Course</Button>
+        <Button variant="outline" className="hover:cursor-pointer">Edit Course</Button>
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-[425px] ">
@@ -298,6 +298,7 @@ export function CourseForm({ course }: { course: Course }) {
                 id="finished"
                 name="finished"
                 defaultChecked={course.finished ?? false}
+                className="hover:cursor-pointer"
               />
               <Label htmlFor="finished">Finished?</Label>
             </div>
@@ -307,7 +308,7 @@ export function CourseForm({ course }: { course: Course }) {
               <AlertDialogTrigger asChild>
                 <Button
                   type="button"
-                  className="bg-red-500 hover:bg-red-700 text-white"
+                  className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
                 >
                   Delete Course
                 </Button>
@@ -323,7 +324,7 @@ export function CourseForm({ course }: { course: Course }) {
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    className="bg-red-500 hover:bg-red-700 text-white"
+                    className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
                     onClick={handleStudyDelete}
                     disabled={deleting}
                   >
@@ -335,11 +336,11 @@ export function CourseForm({ course }: { course: Course }) {
             <span className="w-full"></span>
 
             <DialogClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" className="hover:cursor-pointer">
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
               {submitting ? "Saving..." : "Save Course"}
             </Button>
           </DialogFooter>
