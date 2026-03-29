@@ -174,9 +174,9 @@ export function LoginForm({
               <Image
                 src="https://static.twks.net/images/twks.png"
                 alt=""
-                width={12}
-                height={12}
-                className="size-5 mr-2"
+                width={10}
+                height={10}
+                className="size-4 mr-0.5"
               />
               Login with TWKS
             </Button>
