@@ -215,7 +215,7 @@ export function CourseForm({ course }: { course: Course }) {
                 <SelectContent>
                   {studyPrograms.map((program) => (
                     <SelectItem key={program.id} value={program.id}>
-                      {program.name}
+                      {program.degree} {program.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -268,8 +268,8 @@ export function CourseForm({ course }: { course: Course }) {
                 onChange={(e) => setGrade(e.target.value)}
                 type="number"
                 step="0.1"
-                min={preferences?.grade_min || 1.0}
-                max={preferences?.grade_max || 5.0}
+                min={Math.min(preferences?.grade_min ?? 1.0, preferences?.grade_max ?? 5.0)}
+                max={Math.max(preferences?.grade_min ?? 1.0, preferences?.grade_max ?? 5.0)}
               />
             </div>
             <div className="grid gap-3">

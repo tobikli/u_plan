@@ -19,6 +19,7 @@ import { Editor } from "@/components/blocks/editor-md/editor";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { ExternalLinkIcon } from "lucide-react";
 
 function Info({ label, value }: { label: string; value: string | number }) {
   return (
@@ -31,7 +32,7 @@ function Info({ label, value }: { label: string; value: string | number }) {
 
 export default function StudyDetail() {
   const params = useParams<{ id: string }>();
-  const { studyPrograms, courses, loading } = useData();
+  const { studyPrograms, courses, loading, preferences } = useData();
   const supabase = useMemo(() => createClient(), []);
 
   const course = useMemo(
@@ -211,7 +212,9 @@ export default function StudyDetail() {
               <>
                 <Tooltip>
                   {!Number.isNaN(programAverage) ? (
-                    programAverage < course.grade ? (
+                    ((preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5)
+                      ? programAverage < course.grade
+                      : programAverage > course.grade) ? (
                       <>
                         <TooltipTrigger asChild>
                           <span className="text-red-500 font-medium">▲</span>
@@ -220,7 +223,9 @@ export default function StudyDetail() {
                           <p>Worse than program average</p>
                         </TooltipContent>
                       </>
-                    ) : programAverage > course.grade ? (
+                    ) : ((preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5)
+                      ? programAverage > course.grade
+                      : programAverage < course.grade) ? (
                       <>
                         <TooltipTrigger asChild>
                           <span className="text-green-500 font-medium">▼</span>
@@ -255,8 +260,9 @@ export default function StudyDetail() {
           <div className="rounded-md border p-3 text-sm">
             <p className="text-muted-foreground">Corresponding Program</p>
             <p className="font-medium">
-              <Link href={"/app/programs/" + program.id}>
+              <Link href={"/app/programs/" + program.id} className="inline-flex items-center gap-1 hover:underline">
                 {program.degree} | {program.name}
+                <ExternalLinkIcon className="size-3.5" />
               </Link>
             </p>
           </div>

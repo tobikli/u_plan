@@ -104,10 +104,10 @@ const saveCourses = async () => {
       return;
     }
 
-    if (gradeMin >= gradeMax || gradePassed < gradeMin || gradePassed > gradeMax) {
-      toast.error("Invalid grade range");
-      return;
-    }
+    //if (gradeMin >= gradeMax || gradePassed < gradeMin || gradePassed > gradeMax) {
+    //  toast.error("Invalid grade range");
+    //  return;
+    //}
 
     const { error } = await supabase
       .from("preferences")
@@ -212,7 +212,7 @@ const saveCourses = async () => {
         <Card>
           <CardHeader>
             <CardTitle>Courses</CardTitle>
-            <CardDescription>Preferences for your courses. (Changing this after adding courses can break statistics!)</CardDescription>
+            <CardDescription>Preferences for your courses.</CardDescription>
             <CardAction>
               <Button onClick={saveCourses} variant="outline" className="hover:cursor-pointer">
                 Save
@@ -221,7 +221,7 @@ const saveCourses = async () => {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             <div className="flex justify-between">
-              <Label htmlFor="gradeMin">Best Grade</Label>
+              <Label htmlFor="gradeMin">Best Possible Grade</Label>
               <Input
                 id="gradeMin"
                 type="number"
@@ -232,7 +232,7 @@ const saveCourses = async () => {
               />
             </div>
             <div className="flex justify-between">
-              <Label htmlFor="gradeMax">Worst Grade</Label>
+              <Label htmlFor="gradeMax">Worst Possible Grade</Label>
               <Input
                 id="gradeMax"
                 type="number"

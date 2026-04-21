@@ -90,7 +90,10 @@ export default function StudyDetail() {
         course.credits > 0 &&
         (preferences.grade_include_failed
           ? true
-          : course.grade != null && course.grade <= preferences.grade_passed)
+          : course.grade != null &&
+            (preferences.grade_min < preferences.grade_max
+              ? course.grade <= preferences.grade_passed
+              : course.grade >= preferences.grade_passed))
     );
 
     const totalWeightedGrades = relevantCourses.reduce(
@@ -146,6 +149,24 @@ export default function StudyDetail() {
   const gradeBySemesterConfig: ChartConfig = {
     average: {
       label: "Avg grade",
+      color: "var(--chart-color)",
+    },
+  };
+
+  const creditsBySemester = useMemo(() => {
+    const bySem = new Map<number, number>();
+    programCourses.forEach((course) => {
+      if (!course.semesters || course.credits <= 0) return;
+      bySem.set(course.semesters, (bySem.get(course.semesters) || 0) + course.credits);
+    });
+    return Array.from(bySem.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([semester, credits]) => ({ semester, credits }));
+  }, [programCourses]);
+
+  const creditsBySemesterConfig: ChartConfig = {
+    credits: {
+      label: "Credits",
       color: "var(--chart-color)",
     },
   };
@@ -312,13 +333,57 @@ export default function StudyDetail() {
           </div>
         </div>
       </div>
-      <div className="rounded-md border p-3 text-sm">
-        <p className="text-muted-foreground">Grade</p>
-        <p className="text-center p-3 align-middle text-2xl font-semibold flex items-center justify-center">
+            <div className="grid gap-4 lg:grid-cols-2">
+
+      <div className="rounded-md border p-3 text-sm flex flex-col">
+        <p className="font-semibold">Grade</p>
+        <p className="text-muted-foreground">Average grade</p>
+        <p className="flex-1 text-center text-4xl font-semibold flex items-center justify-center">
           {averageGrade?.toFixed(2)}
         </p>
       </div>
-
+      <Card className="h-full bg-black/0 overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle>Credits per semester</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {creditsBySemester.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No courses with semesters yet.</p>
+            ) : (
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-[320px]">
+                  <ChartContainer
+                    config={creditsBySemesterConfig}
+                    className="w-full h-[260px]"
+                  >
+                    <BarChart data={creditsBySemester}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="semester"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tickLine={false}
+                        axisLine={false}
+                        width={30}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar
+                        dataKey="credits"
+                        fill="var(--color-credits)"
+                        radius={[6, 6, 0, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="h-full bg-black/0 overflow-hidden">
           <CardHeader className="pb-2">
@@ -344,7 +409,11 @@ export default function StudyDetail() {
                         tickMargin={8}
                       />
                       <YAxis
-                        domain={[1, 5]}
+                        domain={[
+                          preferences?.grade_min ?? 1,
+                          preferences?.grade_max ?? 5,
+                        ]}
+                        reversed={(preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5)}
                         tickCount={5}
                         tickLine={false}
                         axisLine={false}

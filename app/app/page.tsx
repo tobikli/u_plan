@@ -40,12 +40,16 @@ export default function Page() {
     const rawPassed = preferences?.grade_passed ?? 4;
     const passed = Math.min(max, Math.max(min, rawPassed));
     const span = Math.max(0.1, max - min);
+    const lowerIsBetter = min < max;
     return {
       min,
       max,
       passed,
       span,
+      lowerIsBetter,
       clamp: (v: number) => Math.min(max, Math.max(min, v)),
+      isBetter: (a: number, b: number) =>
+        lowerIsBetter ? a < b : a > b,
     };
   }, [preferences]);
 
@@ -119,20 +123,20 @@ export default function Page() {
 
   const gradeBands = useMemo(() => {
     const { min, max } = gradeBounds;
-    const start = Math.floor(min);
-    const end = Math.ceil(max);
+    const lo = Math.min(min, max);
+    const hi = Math.max(min, max);
+    const start = Math.floor(lo);
+    const end = Math.max(start + 1, Math.ceil(hi));
     const buckets: { label: string; count: number }[] = [];
 
     for (let g = start; g < end; g++) {
-      const lo = g;
-      const hi = g + 1;
-      buckets.push({ label: `${lo.toFixed(1)}-${hi.toFixed(1)}`, count: 0 });
+      buckets.push({ label: `${g.toFixed(1)}-${(g + 1).toFixed(1)}`, count: 0 });
     }
 
     courses.forEach((c) => {
       if (typeof c.grade !== "number") return;
-      const g = Math.min(max, Math.max(min, c.grade));
-      const idx = Math.min(buckets.length - 1, Math.floor(g - start));
+      const g = Math.min(hi, Math.max(lo, c.grade));
+      const idx = Math.min(buckets.length - 1, Math.max(0, Math.floor(g - start)));
       buckets[idx].count += 1;
     });
 
@@ -358,7 +362,10 @@ export default function Page() {
                 <div className="flex items-center justify-between text-foreground">
                   <span className="font-semibold">Best bucket</span>
                   <span>
-                    {gradeBands.find((g) => g.count > 0)?.label ?? "n/a"}
+                    {(gradeBounds.lowerIsBetter
+                      ? gradeBands.find((g) => g.count > 0)
+                      : [...gradeBands].reverse().find((g) => g.count > 0)
+                    )?.label ?? "n/a"}
                   </span>
                 </div>
                 <Separator />
@@ -382,6 +389,7 @@ export default function Page() {
                         axisLine={false}
                         tickMargin={4}
                         domain={[gradeBounds.min, gradeBounds.max]}
+                        reversed={gradeBounds.lowerIsBetter}
                         allowDecimals={false}
                       />
                       <ChartTooltip
