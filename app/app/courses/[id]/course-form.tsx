@@ -39,6 +39,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Course } from "@/types/course";
 import { TagInput } from "../tag-input";
+import { getStudyPeriodLabel } from "@/lib/study-period";
 
 export function CourseForm({ course }: { course: Course }) {
   const [semester, setSemester] = useState(course.semesters.toString());
@@ -58,6 +59,13 @@ export function CourseForm({ course }: { course: Course }) {
     preferences,
     courses,
   } = useData();
+  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
+    capitalized: true,
+  });
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: true,
+    capitalized: true,
+  });
   const [programId, setProgramId] = useState(course.program_id);
   const router = useRouter();
 
@@ -105,7 +113,7 @@ export function CourseForm({ course }: { course: Course }) {
       }
 
       if (!semestersRaw || !Number.isFinite(semesters) || semesters < 1) {
-        toast.error("Semesters must be a positive number");
+        toast.error(`${studyPeriodLabelPlural} must be a positive number`);
         return;
       }
 
@@ -273,7 +281,7 @@ export function CourseForm({ course }: { course: Course }) {
               />
             </div>
             <div className="grid gap-3">
-              <Label htmlFor="semester">Semester</Label>
+              <Label htmlFor="semester">{studyPeriodLabel}</Label>
               <Input
                 id="semester"
                 name="semester"

@@ -7,4 +7,5 @@ export type Preferences = {
   grade_include_failed: boolean
   created_at: string
   updated_at?: string | null
+  trimester: boolean
 }

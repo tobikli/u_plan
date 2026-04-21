@@ -22,12 +22,20 @@ import type { StudyProgram } from "@/types/study-program";
 import { IconPlus } from "@tabler/icons-react";
 import { useData } from "@/lib/data-provider";
 import { TagInput } from "../../courses/tag-input";
+import { getStudyPeriodLabel } from "@/lib/study-period";
 
 export function CourseForm(program: { program: StudyProgram }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const { preferences, courses } = useData();
+  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
+    capitalized: true,
+  });
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: true,
+    capitalized: true,
+  });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const availableTags = useMemo(
@@ -69,7 +77,7 @@ export function CourseForm(program: { program: StudyProgram }) {
       }
 
       if (!semestersRaw || !Number.isFinite(semesters) || semesters < 1) {
-        toast.error("Semesters must be a positive number");
+        toast.error(`${studyPeriodLabelPlural} must be a positive number`);
         return;
       }
 
@@ -173,7 +181,7 @@ export function CourseForm(program: { program: StudyProgram }) {
               />
             </div>
             <div className="grid gap-3">
-              <Label htmlFor="semester">Semester</Label>
+              <Label htmlFor="semester">{studyPeriodLabel}</Label>
               <Input
                 id="semester"
                 name="semester"

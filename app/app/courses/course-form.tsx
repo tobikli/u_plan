@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { useData } from "@/lib/data-provider";
+import { getStudyPeriodLabel } from "@/lib/study-period";
 import { toast } from "sonner";
 import { TagInput } from "./tag-input";
 
@@ -38,6 +39,13 @@ export function CourseForm({
   const [programId, setProgramId] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const { studyPrograms, loading: loadingPrograms, preferences, courses } = useData();
+  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
+    capitalized: true,
+  });
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: true,
+    capitalized: true,
+  });
   const router = useRouter();
 
   const availableTags = useMemo(
@@ -80,7 +88,7 @@ export function CourseForm({
       }
 
       if (!semestersRaw || !Number.isFinite(semesters) || semesters < 1) {
-        toast.error("Semesters must be a positive number");
+        toast.error(`${studyPeriodLabelPlural} must be a positive number`);
         return;
       }
 
@@ -209,7 +217,7 @@ export function CourseForm({
               />
             </div>
             <div className="grid gap-3">
-              <Label htmlFor="semester">Semester</Label>
+              <Label htmlFor="semester">{studyPeriodLabel}</Label>
               <Input
                 id="semester"
                 name="semester"

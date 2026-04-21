@@ -6,7 +6,7 @@ import type { StudyProgram } from "@/types/study-program";
 import { useData } from "@/lib/data-provider";
 import { ProgramForm } from "./program-form";
 import { CourseTable } from "./courses";
-import { columns } from "./columns";
+import { getProgramCourseColumns } from "./columns";
 import { CourseForm } from "./course-form";
 import CenteredSpinner from "@/components/ui/centered-spinner";
 import { CircularProgress } from "@/components/customized/progress/progress-08";
@@ -27,6 +27,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import {
+  formatStudyPeriod,
+  getStudyPeriodLabel,
+} from "@/lib/study-period";
 import {
   Bar,
   BarChart,
@@ -50,6 +54,13 @@ export default function StudyDetail() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { studyPrograms, courses, loading, preferences } = useData();
+  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
+    capitalized: true,
+  });
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: true,
+    capitalized: true,
+  });
 
   const program = useMemo(
     () => studyPrograms.find((p) => p.id === params.id),
@@ -128,10 +139,10 @@ export default function StudyDetail() {
     return Array.from(bySem.entries())
       .sort((a, b) => a[0] - b[0])
       .map(([semester, { sum, credits }]) => ({
-        semester,
+        period: formatStudyPeriod(preferences, semester, { compact: true }),
         average: credits > 0 ? Number((sum / credits).toFixed(2)) : null,
       }));
-  }, [programCourses]);
+  }, [programCourses, preferences]);
 
   const gradeDistribution = useMemo(() => {
     const counts = new Map<string, number>();
@@ -161,8 +172,16 @@ export default function StudyDetail() {
     });
     return Array.from(bySem.entries())
       .sort((a, b) => a[0] - b[0])
-      .map(([semester, credits]) => ({ semester, credits }));
-  }, [programCourses]);
+      .map(([semester, credits]) => ({
+        period: formatStudyPeriod(preferences, semester, { compact: true }),
+        credits,
+      }));
+  }, [programCourses, preferences]);
+
+  const columns = useMemo(
+    () => getProgramCourseColumns(preferences),
+    [preferences]
+  );
 
   const creditsBySemesterConfig: ChartConfig = {
     credits: {
@@ -249,7 +268,7 @@ export default function StudyDetail() {
       .eq("id", program.id);
 
     if (error) {
-      toast.error(error.message ?? "Failed to update semester");
+      toast.error(error.message ?? `Failed to update ${studyPeriodLabel.toLowerCase()}`);
       return;
     }
 
@@ -259,7 +278,7 @@ export default function StudyDetail() {
   const increaseSemester = () => {
     if (program.current_semester < program.semesters) {
       updateSemester(program.current_semester + 1);
-      toast.success("Yay, you advanced a semester!");
+      toast.success(`Yay, you advanced a ${studyPeriodLabel.toLowerCase()}!`);
     }
   };
 
@@ -283,7 +302,7 @@ export default function StudyDetail() {
       </div>
       <div className="grid gap-3 grid-cols-3">
         <div className="rounded-md border p-3 text-sm">
-          <p className="text-muted-foreground">Semester</p>
+          <p className="text-muted-foreground">{studyPeriodLabel}</p>
           <div className="flex">
             <p className="font-medium">
               {program.current_semester + "/" + program.semesters}
@@ -344,11 +363,11 @@ export default function StudyDetail() {
       </div>
       <Card className="h-full bg-black/0 overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle>Credits per semester</CardTitle>
+            <CardTitle>{`Credits per ${studyPeriodLabel.toLowerCase()}`}</CardTitle>
           </CardHeader>
           <CardContent>
             {creditsBySemester.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No courses with semesters yet.</p>
+              <p className="text-sm text-muted-foreground">{`No courses with ${studyPeriodLabelPlural.toLowerCase()} yet.`}</p>
             ) : (
               <div className="overflow-x-auto pb-2">
                 <div className="min-w-[320px]">
@@ -359,7 +378,7 @@ export default function StudyDetail() {
                     <BarChart data={creditsBySemester}>
                       <CartesianGrid vertical={false} strokeDasharray="3 3" />
                       <XAxis
-                        dataKey="semester"
+                        dataKey="period"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
@@ -387,7 +406,7 @@ export default function StudyDetail() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="h-full bg-black/0 overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle>Average grade per semester</CardTitle>
+            <CardTitle>{`Average grade per ${studyPeriodLabel.toLowerCase()}`}</CardTitle>
             <CardDescription>Weighted by credits</CardDescription>
           </CardHeader>
           <CardContent>
@@ -403,7 +422,7 @@ export default function StudyDetail() {
                     <LineChart data={gradeBySemester}>
                       <CartesianGrid vertical={false} strokeDasharray="3 3" />
                       <XAxis
-                        dataKey="semester"
+                        dataKey="period"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}

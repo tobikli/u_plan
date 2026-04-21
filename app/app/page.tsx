@@ -29,10 +29,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useData } from "@/lib/data-provider";
+import { formatStudyPeriod, getStudyPeriodLabel } from "@/lib/study-period";
 import CenteredSpinner from "@/components/ui/centered-spinner";
 
 export default function Page() {
   const { courses, studyPrograms, loading, preferences } = useData();
+  const studyPeriod = getStudyPeriodLabel(preferences);
 
   const gradeBounds = useMemo(() => {
     const min = preferences?.grade_min ?? 1;
@@ -161,10 +163,10 @@ export default function Page() {
     return Array.from(buckets.entries())
       .sort(([a], [b]) => a - b)
       .map(([semester, { sum, count }]) => ({
-        semester: `S${semester}`,
+        semester: formatStudyPeriod(preferences, semester, { compact: true }),
         grade: count ? Number((sum / count).toFixed(2)) : 0,
       }));
-  }, [courses]);
+  }, [courses, preferences]);
 
   const creditsRatio = useMemo(() => {
     const planned = stats.creditsPlanned || 0;
@@ -200,7 +202,7 @@ export default function Page() {
     },
     /*
     {
-      label: "Avg. semester",
+      label: "Avg. study period",
       value: stats.avgSemester ? stats.avgSemester.toFixed(1) : "—",
       sub: "Current progress",
     }, */
@@ -369,7 +371,7 @@ export default function Page() {
                   </span>
                 </div>
                 <Separator />
-                <p>Avg grade per semester</p>
+                <p>Avg grade per {studyPeriod}</p>
                 <div className="w-full overflow-x-auto">
                   <ChartContainer config={gradesConfig} className="min-h-32">
                     <LineChart

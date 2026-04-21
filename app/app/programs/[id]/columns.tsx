@@ -3,8 +3,20 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { Course } from "@/types/course"
+import { getStudyPeriodLabel } from "@/lib/study-period"
+import type { Preferences } from "@/types/preferences"
 
-export const columns: ColumnDef<Course>[] = [
+type PreferencesLike = Pick<Preferences, "trimester"> | null | undefined
+
+export function getProgramCourseColumns(
+  preferences: PreferencesLike
+): ColumnDef<Course>[] {
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: false,
+    capitalized: true,
+  })
+
+  return [
   {
     accessorKey: "course_code",
     header: "Course Code",
@@ -45,7 +57,7 @@ export const columns: ColumnDef<Course>[] = [
   },
   {
     accessorKey: "semesters",
-    header: "Semester(s)",
+    header: studyPeriodLabelPlural,
   },
   {
     accessorKey: "finished",
@@ -53,3 +65,4 @@ export const columns: ColumnDef<Course>[] = [
     cell: ({ row }) => row.getValue("finished") ? "Completed" : "In Progress",
   },
 ]
+}

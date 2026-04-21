@@ -32,6 +32,7 @@ import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import type { StudyProgram } from "@/types/study-program";
 import { useData } from "@/lib/data-provider";
+import { getStudyPeriodLabel } from "@/lib/study-period";
 
 export function ProgramForm({ program }: { program: StudyProgram }) {
   const [degree, setDegree] = useState<degreeType | "">(program.degree);
@@ -42,7 +43,11 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const { refreshStudyPrograms } = useData();
+  const { refreshStudyPrograms, preferences } = useData();
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: true,
+    capitalized: true,
+  });
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -71,7 +76,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
       }
 
       if (!semestersRaw || !Number.isFinite(semesters) || semesters < 1) {
-        toast.error("Semesters must be a positive number");
+        toast.error(`${studyPeriodLabelPlural} must be a positive number`);
         return;
       }
 
@@ -173,7 +178,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
                 />
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="semesters">Semesters</Label>
+                <Label htmlFor="semesters">{studyPeriodLabelPlural}</Label>
                 <Input
                   id="semesters"
                   name="semesters"

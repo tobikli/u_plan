@@ -20,6 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import CenteredSpinner from "@/components/ui/centered-spinner";
+import { getStudyPeriodLabel } from "@/lib/study-period";
 
 /* eslint-disable react-hooks/set-state-in-effect */
 
@@ -29,6 +30,9 @@ export default function Page() {
   const [createdAt, setCreatedAt] = useState<string>("");
 
   const { preferences, refreshPreferences, loading } = useData();
+  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
+    capitalized: true,
+  });
 
   useEffect(() => {
     const supabase = createClient();
@@ -50,10 +54,13 @@ export default function Page() {
   const [gradeMin, setGradeMin] = useState<number>(preferences?.grade_min ?? 1);
   const [gradeMax, setGradeMax] = useState<number>(preferences?.grade_max ?? 5);
   const [gradePassed, setGradePassed] = useState<number>(
-    preferences?.grade_passed ?? 4
+    preferences?.grade_passed ?? 4,
   );
   const [gradeIncludeFailed, setGradeIncludeFailed] = useState<boolean>(
-    preferences?.grade_include_failed ?? false
+    preferences?.grade_include_failed ?? false,
+  );
+  const [useTrimester, setSemesterToggle] = useState<boolean>(
+    preferences?.trimester ?? false,
   );
 
   useEffect(() => {
@@ -62,12 +69,11 @@ export default function Page() {
     setGradeMax(preferences.grade_max ?? 5);
     setGradePassed(preferences.grade_passed ?? 4);
     setGradeIncludeFailed(preferences.grade_include_failed ?? false);
+    setSemesterToggle(preferences.trimester ?? false);
   }, [preferences]);
 
   if (loading) {
-    return (
-      <CenteredSpinner />
-    );
+    return <CenteredSpinner />;
   }
 
   const saveProgram = async () => {
@@ -84,6 +90,7 @@ export default function Page() {
       .update({
         user_id: userResult.user.id,
         grade_include_failed: gradeIncludeFailed,
+        trimester: useTrimester,
       })
       .eq("user_id", userResult.user.id);
 
@@ -95,7 +102,7 @@ export default function Page() {
     toast.success("Program settings saved");
   };
 
-const saveCourses = async () => {
+  const saveCourses = async () => {
     const supabase = createClient();
     const { data: userResult, error: userError } =
       await supabase.auth.getUser();
@@ -144,7 +151,13 @@ const saveCourses = async () => {
               Update your profile and credentials.
             </CardDescription>
             <CardAction>
-              <AccountForm trigger={<Button variant="outline" className="hover:cursor-pointer">Edit</Button>} />
+              <AccountForm
+                trigger={
+                  <Button variant="outline" className="hover:cursor-pointer">
+                    Edit
+                  </Button>
+                }
+              />
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
@@ -162,7 +175,11 @@ const saveCourses = async () => {
                 {createdAt ? new Date(createdAt).toLocaleDateString() : "-"}
               </span>
             </div>
-            <Button asChild variant="link" className="px-0 text-primary hover:cursor-pointer">
+            <Button
+              asChild
+              variant="link"
+              className="px-0 text-primary hover:cursor-pointer"
+            >
               <a href="/auth/update-password">Update password</a>
             </Button>
           </CardContent>
@@ -190,7 +207,11 @@ const saveCourses = async () => {
               Preferences for your study programs.
             </CardDescription>
             <CardAction>
-              <Button onClick={saveProgram} variant="outline" className="hover:cursor-pointer">
+              <Button
+                onClick={saveProgram}
+                variant="outline"
+                className="hover:cursor-pointer"
+              >
                 Save
               </Button>
             </CardAction>
@@ -207,6 +228,19 @@ const saveCourses = async () => {
               </Label>
             </div>
           </CardContent>
+          <CardContent className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-3 my-2">
+              <Checkbox
+                checked={useTrimester}
+                onCheckedChange={(checked) => setSemesterToggle(!!checked)}
+                className="hover:cursor-pointer"
+              />
+              <Label htmlFor="gradeIncludeFailed">
+                Use trimester system (3 terms per year)
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground">Current system: {studyPeriodLabel}</p>
+          </CardContent>
         </Card>
 
         <Card>
@@ -214,7 +248,11 @@ const saveCourses = async () => {
             <CardTitle>Courses</CardTitle>
             <CardDescription>Preferences for your courses.</CardDescription>
             <CardAction>
-              <Button onClick={saveCourses} variant="outline" className="hover:cursor-pointer">
+              <Button
+                onClick={saveCourses}
+                variant="outline"
+                className="hover:cursor-pointer"
+              >
                 Save
               </Button>
             </CardAction>

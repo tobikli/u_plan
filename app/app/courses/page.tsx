@@ -13,7 +13,7 @@ import {
 import type { Course } from "@/types/course";
 import { CourseForm } from "./course-form";
 import { CourseTable } from "./courses";
-import { columns } from "./columns";
+import { getCourseColumns } from "./columns";
 import { useData } from "@/lib/data-provider";
 import CenteredSpinner from "@/components/ui/centered-spinner";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 type CourseWithProgram = Course & { program_name?: string };
 
 export default function Page() {
-  const { courses, studyPrograms, loading } = useData();
+  const { courses, studyPrograms, loading, preferences } = useData();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<
     "name" | "course_code" | "credits" | "grade" | "tags"
@@ -86,6 +86,8 @@ export default function Page() {
 
     return sorted;
   }, [coursesWithProgram, search, sortKey, sortDir]);
+
+  const columns = useMemo(() => getCourseColumns(preferences), [preferences]);
 
   if (loading) return <CenteredSpinner />;
   if (!courses || courses.length === 0) {

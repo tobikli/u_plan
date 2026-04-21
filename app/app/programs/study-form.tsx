@@ -20,12 +20,19 @@ import { DegreeDrop } from "./components/degreedrop";
 import type { degreeType } from "@/types/study-program";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { useData } from "@/lib/data-provider";
+import { getStudyPeriodLabel } from "@/lib/study-period";
 
 
 export function StudyForm() {
   const [degree, setDegree] = useState<degreeType | "">("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const { preferences } = useData();
+  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
+    plural: true,
+    capitalized: true,
+  });
 
   const router = useRouter();
 
@@ -55,7 +62,7 @@ export function StudyForm() {
       }
 
       if (!semestersRaw || !Number.isFinite(semesters) || semesters < 1) {
-        toast.error("Semesters must be a positive number");
+        toast.error(`${studyPeriodLabelPlural} must be a positive number`);
         return;
       }
 
@@ -130,7 +137,7 @@ export function StudyForm() {
                 />
               </div>
               <div className="grid gap-3">
-                <Label htmlFor="semesters">Semesters</Label>
+                <Label htmlFor="semesters">{studyPeriodLabelPlural}</Label>
                 <Input
                   id="semesters"
                   name="semesters"
