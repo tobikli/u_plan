@@ -11,7 +11,7 @@ const nextConfig = {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
   images: {
-    remotePatterns: [new URL("https://static.twks.net/**")],
+    remotePatterns: [new URL("https://static.twks.net/**"), new URL("https://www.gravatar.com/avatar/**")],
   },
   turbopack: {
     rules: {

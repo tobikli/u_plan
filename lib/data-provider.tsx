@@ -26,25 +26,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [preferences, setPreferences] = useState<Preferences | null>(null); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const supabase = createClient();
 
+  // Resolve user ID once from the local session (no network call)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id ?? null);
+    });
+  }, [supabase]);
+
   // Fetch courses
   const fetchCourses = useCallback(async () => {
+    if (!userId) return;
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !userData.user) {
-        setCourses([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("courses")
         .select(
           "id, course_code, name, credits, grade, program_id, semesters, finished, tags, user_id, created_at, updated_at"
         )
-        .eq("user_id", userData.user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -58,22 +60,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching courses:", err);
       setError("Failed to fetch courses");
     }
-  }, [supabase]);
+  }, [supabase, userId]);
 
   // Fetch study programs
   const fetchStudyPrograms = useCallback(async () => {
+    if (!userId) return;
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !userData.user) {
-        setStudyPrograms([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("study_programs")
         .select("*")
-        .eq("user_id", userData.user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -87,21 +83,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching study programs:", err);
       setError("Failed to fetch study programs");
     }
-  }, [supabase]);
+  }, [supabase, userId]);
 
   const fetchPreferences = useCallback(async () => {
+    if (!userId) return;
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !userData.user) {
-        setPreferences(null);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("preferences")
         .select("*")
-        .eq("user_id", userData.user.id)
+        .eq("user_id", userId)
         .single();
 
       if (error) {
@@ -115,10 +105,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching preferences:", err);
       setError("Failed to fetch preferences");
     }
-  }, [supabase]);
+  }, [supabase, userId]);
 
-  // Initial data fetch
+  // Initial data fetch (runs once userId is resolved)
   useEffect(() => {
+    if (!userId) return;
     const loadData = async () => {
       setLoading(true);
       try {
@@ -131,25 +122,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadData();
-  }, [fetchCourses, fetchStudyPrograms, fetchPreferences]);
+  }, [userId, fetchCourses, fetchStudyPrograms, fetchPreferences]);
 
   // Set up real-time subscriptions
   useEffect(() => {
+    if (!userId) return;
+
     let coursesChannel: RealtimeChannel | null = null;
     let programsChannel: RealtimeChannel | null = null;
     let preferencesChannel: RealtimeChannel | null = null;
-
-    const setupSubscriptions = async () => {
-      const { data: userData, error: authError } = await supabase.auth.getUser();
-      
-      if (authError) {
-        console.error("Failed to get user for subscriptions:", authError);
-        return;
-      }
-      
-      if (!userData.user) return;
-
-      const userId = userData.user.id;
 
       // Subscribe to courses changes
       coursesChannel = supabase
@@ -201,9 +182,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           }
         )
         .subscribe();
-    };
-
-    setupSubscriptions();
 
     // Cleanup subscriptions on unmount
     return () => {
@@ -217,7 +195,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         supabase.removeChannel(preferencesChannel);
       }
     };
-  }, [supabase, fetchCourses, fetchStudyPrograms, fetchPreferences]);
+  }, [supabase, userId, fetchCourses, fetchStudyPrograms, fetchPreferences]);
 
   const value: DataContextType = {
     courses,

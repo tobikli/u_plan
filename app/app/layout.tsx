@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const email = user.email?.trim().toLowerCase() ?? ""
   const hash = email ? createHash("md5").update(email).digest("hex") : ""
+  const avatarUrl = user.user_metadata?.avatar_url;
   const gravatarUrl = hash
     ? `https://www.gravatar.com/avatar/${hash}?s=128&d=identicon`
     : undefined
@@ -39,7 +40,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           variant="inset"
           userEmail={user.email ?? undefined}
           userName={displayName}
-          userAvatar={gravatarUrl}
+          userAvatar={avatarUrl ?? gravatarUrl}
         />
         <SidebarInset className="overflow-x-hidden">
           <SiteHeader />
