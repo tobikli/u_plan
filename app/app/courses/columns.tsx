@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { getStudyPeriodLabel } from "@/lib/study-period";
 import type { Preferences } from "@/types/preferences";
 import { formatGrade } from "@/lib/examinations";
+import { CourseCompletionButton } from "@/components/workspace/course-completion-button";
 type CourseWithProgram = Course & { program_name?: string };
 type PreferencesLike = Pick<Preferences, "trimester"> | null | undefined;
 export function getCourseColumns(
@@ -108,6 +109,11 @@ export function getCourseColumns(
           {row.original.finished ? "Completed" : "In progress"}
         </Badge>
       ),
+    },
+    {
+      id: "completion",
+      header: "",
+      cell: ({ row }) => <CourseCompletionButton course={row.original} />,
     },
   ];
 }

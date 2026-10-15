@@ -230,7 +230,7 @@ export function CourseForm({ course }: { course: Course }) {
               disabled={submitting}
               className="min-w-0 space-y-6 px-6 py-5"
             >
-              <EditSection title="Course details">
+              <EditSection>
                 <div className="grid gap-2">
                   <Label htmlFor={`${fieldId}-name`}>Course name</Label>
                   <Input

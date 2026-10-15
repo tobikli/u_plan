@@ -1,5 +1,7 @@
 "use client";
 
+import { ProgramTemplatePicker } from "@/components/universities/program-template-picker";
+import type { UniversityLink } from "@/types/university";
 import { Plus, LoaderCircle } from "lucide-react";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -19,6 +21,11 @@ import { getStudyPeriodLabel } from "@/lib/study-period";
 
 export function StudyForm() {
   const fieldId = useId();
+  const [template, setTemplate] = useState<UniversityLink | null>(null);
+  const [name, setName] = useState("");
+  const [institution, setInstitution] = useState("");
+  const [credits, setCredits] = useState("");
+  const [semesters, setSemesters] = useState("");
   const [degree, setDegree] = useState<degreeType | "">("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -78,6 +85,8 @@ export function StudyForm() {
         .from("study_programs")
         .insert({
           user_id: userResult.user.id,
+          university_id: template?.university_id ?? null,
+          university_program_id: template?.university_program_id ?? null,
           degree,
           name,
           institution,
@@ -108,7 +117,14 @@ export function StudyForm() {
 
   const changeOpen = (next: boolean) => {
     if (submitting) return;
-    if (next) setDegree("");
+    if (next) {
+      setDegree("");
+      setTemplate(null);
+      setName("");
+      setInstitution("");
+      setCredits("");
+      setSemesters("");
+    }
     setOpen(next);
   };
   return (
@@ -151,12 +167,26 @@ export function StudyForm() {
           </>
         }
       >
-        <EditSection title="Program details">
+        <ProgramTemplatePicker
+          value={template}
+          onChange={setTemplate}
+          onApply={(program, university) => {
+            setName(program.name);
+            setDegree(program.degree);
+            setInstitution(university.name);
+            if (program.credits !== null) setCredits(String(program.credits));
+            if (program.semesters !== null)
+              setSemesters(String(program.semesters));
+          }}
+        />
+        <EditSection>
           <div className="grid gap-2">
             <Label htmlFor={`${fieldId}-name`}>Program name</Label>
             <Input
               id={`${fieldId}-name`}
               name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Computer Science"
               required
             />
@@ -175,6 +205,8 @@ export function StudyForm() {
               <Input
                 id={`${fieldId}-institution`}
                 name="institution"
+                value={institution}
+                onChange={(e) => setInstitution(e.target.value)}
                 placeholder="University or institution"
               />
             </div>
@@ -208,6 +240,8 @@ export function StudyForm() {
               <Input
                 id={`${fieldId}-semesters`}
                 name="semesters"
+                value={semesters}
+                onChange={(e) => setSemesters(e.target.value)}
                 type="number"
                 min="1"
                 placeholder="6"
@@ -219,6 +253,8 @@ export function StudyForm() {
               <Input
                 id={`${fieldId}-credits`}
                 name="credits"
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
                 type="number"
                 min="0"
                 step="0.5"

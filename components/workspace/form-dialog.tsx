@@ -42,7 +42,7 @@ export function FormDialog({
       <form
         onSubmit={onSubmit}
         aria-busy={busy}
-        className="flex max-h-[90dvh] min-h-0 flex-col"
+        className="flex max-h-[90dvh] min-h-0 min-w-0 flex-col"
       >
         <DialogHeader className="shrink-0 border-b bg-muted/20 px-6 py-5 pr-12 text-left">
           <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">

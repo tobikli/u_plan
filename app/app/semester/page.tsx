@@ -9,6 +9,8 @@ import {
   ChevronDown,
   GraduationCap,
   LoaderCircle,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { useData } from "@/lib/data-provider";
 import { createClient } from "@/lib/supabase/client";
@@ -24,6 +26,7 @@ import {
   OverviewLoading,
 } from "@/components/workspace/overview";
 import { ExaminationForm } from "@/components/examinations/examination-form";
+import { CourseCompletionButton } from "@/components/workspace/course-completion-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,8 +55,10 @@ export default function SemesterPage() {
     loading,
     error,
     refreshPreferences,
+    refreshStudyPrograms,
   } = useData();
   const [pendingProgram, setPendingProgram] = useState<string | null>(null);
+  const [updatingPeriod, setUpdatingPeriod] = useState(false);
   const selectedId = pendingProgram ?? preferences?.semester_program_id ?? "";
   const program = studyPrograms.find((program) => program.id === selectedId);
   const studyPeriod = getStudyPeriodLabel(preferences, { capitalized: true });
@@ -88,7 +93,7 @@ export default function SemesterPage() {
     )
     .sort((a, b) => a.exam_date!.localeCompare(b.exam_date!));
   const selectProgram = async (id: string) => {
-    if (pendingProgram !== null) return;
+    if (pendingProgram !== null || updatingPeriod) return;
     setPendingProgram(id);
     try {
       const client = createClient();
@@ -116,6 +121,43 @@ export default function SemesterPage() {
       toast.error("Could not save your program selection. Please try again.");
     } finally {
       setPendingProgram(null);
+    }
+  };
+  const updatePeriod = async (next: number) => {
+    if (
+      !program ||
+      updatingPeriod ||
+      pendingProgram !== null ||
+      next < 1 ||
+      next > program.semesters
+    )
+      return;
+    setUpdatingPeriod(true);
+    try {
+      const client = createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+      if (authError || !user) {
+        toast.error("Please log in again to update your study period");
+        return;
+      }
+      const { error } = await client
+        .from("study_programs")
+        .update({ current_semester: next })
+        .eq("user_id", user.id)
+        .eq("id", program.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      await refreshStudyPrograms();
+      toast.success(`${studyPeriod} updated`);
+    } catch {
+      toast.error("Could not update your study period. Please try again.");
+    } finally {
+      setUpdatingPeriod(false);
     }
   };
   if (loading) return <OverviewLoading />;
@@ -160,7 +202,9 @@ export default function SemesterPage() {
           <Select
             value={program?.id ?? ""}
             onValueChange={(id) => void selectProgram(id)}
-            disabled={pendingProgram !== null || !studyPrograms.length}
+            disabled={
+              pendingProgram !== null || updatingPeriod || !studyPrograms.length
+            }
           >
             <SelectTrigger id="semester-program" className="w-full min-w-0">
               <SelectValue
@@ -227,15 +271,66 @@ export default function SemesterPage() {
                   aria-hidden="true"
                   className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full border-[40px] border-teal-600/5"
                 />
-                <Badge
-                  variant="outline"
-                  className="relative bg-background/70 font-normal"
+                <div
+                  className="relative flex flex-wrap items-center gap-2"
+                  aria-busy={updatingPeriod}
                 >
-                  {formatStudyPeriod(preferences, program.current_semester, {
-                    capitalized: true,
-                  })}{" "}
-                  of {program.semesters}
-                </Badge>
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    aria-label={`Previous ${studyPeriod.toLowerCase()}`}
+                    disabled={
+                      updatingPeriod ||
+                      pendingProgram !== null ||
+                      program.current_semester <= 1
+                    }
+                    onClick={() =>
+                      void updatePeriod(program.current_semester - 1)
+                    }
+                  >
+                    <Minus aria-hidden="true" />
+                  </Button>
+                  <Badge
+                    variant="outline"
+                    className="relative bg-background/70 font-normal"
+                  >
+                    {formatStudyPeriod(preferences, program.current_semester, {
+                      capitalized: true,
+                    })}{" "}
+                    of {program.semesters}
+                  </Badge>
+                  <Button
+                    size="icon-sm"
+                    variant="outline"
+                    aria-label={`Next ${studyPeriod.toLowerCase()}`}
+                    disabled={
+                      updatingPeriod ||
+                      pendingProgram !== null ||
+                      program.current_semester >= program.semesters
+                    }
+                    onClick={() =>
+                      void updatePeriod(program.current_semester + 1)
+                    }
+                  >
+                    {updatingPeriod ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="size-4 animate-spin"
+                      />
+                    ) : (
+                      <Plus aria-hidden="true" />
+                    )}
+                  </Button>
+                  <span role="status" className="sr-only">
+                    {updatingPeriod
+                      ? `Updating ${studyPeriod.toLowerCase()}…`
+                      : formatStudyPeriod(
+                          preferences,
+                          program.current_semester,
+                          { capitalized: true },
+                        )}
+                  </span>
+                </div>
                 <h2 className="relative mt-5 text-2xl font-semibold tracking-tight break-words sm:text-3xl">
                   {program.name}
                 </h2>
@@ -377,11 +472,9 @@ export default function SemesterPage() {
                   return (
                     <Card
                       key={course.id}
-                      className="min-w-0 gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-sm"
+                      className={`min-w-0 gap-0 overflow-hidden border-l-[3px] py-0 shadow-xs transition-shadow hover:shadow-sm ${course.finished ? "border-l-teal-600 dark:border-l-teal-400" : "border-l-muted-foreground/25"}`}
                     >
-                      <div
-                        className={`flex flex-wrap items-start justify-between gap-4 border-l-[3px] p-5 ${course.finished ? "border-l-teal-600 dark:border-l-teal-400" : "border-l-muted-foreground/25"}`}
-                      >
+                      <div className="flex flex-wrap items-start justify-between gap-4 p-5">
                         <div className="min-w-0 flex-1 basis-44">
                           <Link
                             href={`/app/courses/${course.id}`}
@@ -413,7 +506,10 @@ export default function SemesterPage() {
                             </span>
                           </div>
                         </div>
-                        <ExaminationForm course={course} />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <CourseCompletionButton course={course} />
+                          <ExaminationForm course={course} />
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 px-5 pb-4">
                         <div

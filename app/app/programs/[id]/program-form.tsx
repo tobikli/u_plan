@@ -3,6 +3,8 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { ProgramTemplatePicker } from "@/components/universities/program-template-picker";
+import type { UniversityLink } from "@/types/university";
 import { Pencil, LoaderCircle } from "lucide-react";
 import {
   EditSection,
@@ -30,6 +32,14 @@ import { useData } from "@/lib/data-provider";
 import { getStudyPeriodLabel } from "@/lib/study-period";
 
 export function ProgramForm({ program }: { program: StudyProgram }) {
+  const [template, setTemplate] = useState<UniversityLink | null>(
+    program.university_id && program.university_program_id
+      ? {
+          university_id: program.university_id,
+          university_program_id: program.university_program_id,
+        }
+      : null,
+  );
   const [degree, setDegree] = useState<degreeType | "">(program.degree);
   const [semesters, setSemesters] = useState(program.semesters.toString());
   const [name, setName] = useState(program.name);
@@ -106,6 +116,8 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
         .from("study_programs")
         .update({
           user_id: userResult.user.id,
+          university_id: template?.university_id ?? null,
+          university_program_id: template?.university_program_id ?? null,
           degree,
           name,
           institution,
@@ -164,6 +176,14 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
   const changeOpen = (next: boolean) => {
     if (submitting) return;
     if (next) {
+      setTemplate(
+        program.university_id && program.university_program_id
+          ? {
+              university_id: program.university_id,
+              university_program_id: program.university_program_id,
+            }
+          : null,
+      );
       setDegree(program.degree);
       setName(program.name);
       setInstitution(program.institution);
@@ -191,7 +211,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
       >
         <form
           onSubmit={handleSubmit}
-          className="flex max-h-[90dvh] min-h-0 flex-col"
+          className="flex max-h-[90dvh] min-h-0 min-w-0 flex-col"
         >
           <DialogHeader className="shrink-0 border-b bg-muted/20 px-6 py-5 pr-12 text-left">
             <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
@@ -210,7 +230,20 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
               disabled={submitting}
               className="min-w-0 space-y-6 px-6 py-5"
             >
-              <EditSection title="Program details">
+              <ProgramTemplatePicker
+                value={template}
+                onChange={setTemplate}
+                onApply={(selected, university) => {
+                  setName(selected.name);
+                  setDegree(selected.degree);
+                  setInstitution(university.name);
+                  if (selected.credits !== null)
+                    setCredits(String(selected.credits));
+                  if (selected.semesters !== null)
+                    setSemesters(String(selected.semesters));
+                }}
+              />
+              <EditSection>
                 <div className="grid gap-2">
                   <Label htmlFor={`${fieldId}-name`}>Program name</Label>
                   <Input

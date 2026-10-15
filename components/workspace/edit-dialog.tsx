@@ -21,15 +21,17 @@ export function EditSection({
   description,
   children,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   children: ReactNode;
 }) {
   return (
     <fieldset className="min-w-0 space-y-4 border-0 p-0">
-      <legend className="mb-1 text-sm font-semibold tracking-tight">
-        {title}
-      </legend>
+      {title && (
+        <legend className="mb-1 text-sm font-semibold tracking-tight">
+          {title}
+        </legend>
+      )}
       {description && (
         <p className="text-xs leading-5 text-muted-foreground">{description}</p>
       )}

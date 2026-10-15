@@ -1,4 +1,5 @@
 "use client";
+import { CourseCompletionButton } from "@/components/workspace/course-completion-button";
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
@@ -259,7 +260,8 @@ export default function CourseDetail() {
             {course.course_code || "Course details & notes"}
           </p>
         </div>
-        <div className="w-fit shrink-0">
+        <div className="flex w-fit shrink-0 flex-wrap items-center gap-2">
+          <CourseCompletionButton course={course} />
           <CourseForm course={course} />
         </div>
       </div>

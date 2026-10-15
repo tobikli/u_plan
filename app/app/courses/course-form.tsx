@@ -1,5 +1,6 @@
 "use client";
 
+import { CourseTemplatePicker } from "@/components/universities/course-template-picker";
 import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -33,6 +34,10 @@ export function CourseForm({
   program?: StudyProgram;
 }) {
   const fieldId = useId();
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [credits, setCredits] = useState("");
+  const [templateApplied, setTemplateApplied] = useState(false);
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [programId, setProgramId] = useState("");
@@ -145,6 +150,10 @@ export function CourseForm({
   const changeOpen = (next: boolean) => {
     if (submitting) return;
     if (next) {
+      setName("");
+      setCode("");
+      setCredits("");
+      setTemplateApplied(false);
       setSelectedTags([]);
       setProgramId(
         fixedProgram?.id ??
@@ -222,12 +231,27 @@ export function CourseForm({
             </Link>
           </div>
         )}
-        <EditSection title="Course details">
+        {studyPrograms.find((item) => item.id === programId)?.university_id && (
+          <CourseTemplatePicker
+            key={programId}
+            program={studyPrograms.find((item) => item.id === programId)!}
+            onApply={(item) => {
+              setName(item.name);
+              setCode(item.code);
+              if (item.credits !== null) setCredits(String(item.credits));
+              else setCredits("");
+              setTemplateApplied(true);
+            }}
+          />
+        )}
+        <EditSection>
           <div className="grid gap-2">
             <Label htmlFor={`${fieldId}-name`}>Course name</Label>
             <Input
               id={`${fieldId}-name`}
               name="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Algorithms & Data Structures"
               required
             />
@@ -238,6 +262,8 @@ export function CourseForm({
               <Input
                 id={`${fieldId}-code`}
                 name="code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
                 placeholder="CS 201"
                 required
               />
@@ -246,7 +272,15 @@ export function CourseForm({
               <Label htmlFor={`${fieldId}-program`}>Study program</Label>
               <Select
                 value={programId}
-                onValueChange={setProgramId}
+                onValueChange={(value) => {
+                  setProgramId(value);
+                  if (templateApplied) {
+                    setName("");
+                    setCode("");
+                    setCredits("");
+                    setTemplateApplied(false);
+                  }
+                }}
                 disabled={
                   !!fixedProgram || loadingPrograms || !studyPrograms.length
                 }
@@ -283,6 +317,8 @@ export function CourseForm({
               <Input
                 id={`${fieldId}-credits`}
                 name="credits"
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
                 type="number"
                 min="0"
                 step="0.5"
