@@ -2,292 +2,366 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import type { StudyProgram } from "@/types/study-program";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  ArrowRight,
+  FileText,
+  GraduationCap,
+  LoaderCircle,
+  Save,
+} from "lucide-react";
+import type { SerializedEditorState, SerializedParagraphNode } from "lexical";
+import type { Course } from "@/types/course";
 import { useData } from "@/lib/data-provider";
 import { CourseForm } from "./course-form";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import CenteredSpinner from "@/components/ui/centered-spinner";
-import { Course } from "@/types/course";
-import Link from "next/link";
-import { SerializedEditorState } from "lexical";
-
+  OverviewLoading,
+  OverviewStats,
+} from "@/components/workspace/overview";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Editor } from "@/components/blocks/editor-md/editor";
 import { createClient } from "@/lib/supabase/client";
+import { formatStudyPeriod, getStudyPeriodLabel } from "@/lib/study-period";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { ExternalLinkIcon } from "lucide-react";
+import { CourseExaminations } from "@/components/examinations/course-examinations";
+import { formatGrade, summarizeExaminations } from "@/lib/examinations";
 
-function Info({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-md border p-3 text-sm">
-      <p className="text-muted-foreground">{label}</p>
-      <p className="font-medium">{value}</p>
-    </div>
-  );
-}
-
-export default function StudyDetail() {
-  const params = useParams<{ id: string }>();
-  const { studyPrograms, courses, loading, preferences } = useData();
-  const supabase = useMemo(() => createClient(), []);
-
-  const course = useMemo(
-    () => courses.find((c) => c.id === params.id),
-    [courses, params.id]
-  ) as Course | undefined;
-
-  const program = useMemo(
-    () => studyPrograms.find((p) => p.id === course?.program_id),
-    [studyPrograms, course?.program_id]
-  ) as StudyProgram | undefined;
-
-  const initialValue = useMemo(() => {
-    if (course?.editor_state) {
-      try {
-        return course.editor_state as SerializedEditorState;
-      } catch (err) {
-        console.warn("Failed to parse editor state", err);
-      }
-    }
-    return {
-      root: {
-        children: [
-          {
-            children: [
-              {
-                detail: 0,
-                format: 0,
-                mode: "normal",
-                style: "",
-                text: "Add course notes...",
-                type: "text",
-                version: 1,
-              },
-            ],
-            direction: "ltr",
-            format: "",
-            indent: 0,
-            type: "paragraph",
-            version: 1,
-          },
-        ],
+const emptyNotes = {
+  root: {
+    children: [
+      {
+        children: [],
+        textFormat: 0,
+        textStyle: "",
         direction: "ltr",
         format: "",
         indent: 0,
-        type: "root",
+        type: "paragraph",
         version: 1,
       },
-    } as unknown as SerializedEditorState;
-  }, [course?.editor_state]);
+    ],
+    direction: "ltr",
+    format: "",
+    indent: 0,
+    type: "root",
+    version: 1,
+  },
+} satisfies SerializedEditorState<SerializedParagraphNode>;
 
-  const [editorState, setEditorState] =
-    useState<SerializedEditorState>(initialValue);
-  const [notesLoading, setNotesLoading] = useState(false);
+function CourseNotes({ course }: { course: Course }) {
+  const client = useMemo(() => createClient(), []);
+  const [notes, setNotes] = useState<SerializedEditorState>(
+    (course.editor_state as SerializedEditorState) || emptyNotes,
+  );
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editorKey, setEditorKey] = useState(0);
-
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
-    setEditorState(initialValue);
-    setEditorKey((key) => key + 1);
-  }, [initialValue]);
-
-  useEffect(() => {
-    const loadNotes = async () => {
-      if (!course?.id) return;
-      setNotesLoading(true);
+    let active = true;
+    const load = async () => {
       try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        if (userError || !userData.user) {
-          console.error("Unable to load notes: not authenticated", userError);
-          return;
-        }
-
-        const { data, error } = await supabase
+        const {
+          data: { user },
+          error: authError,
+        } = await client.auth.getUser();
+        if (authError || !user) throw new Error("Not authenticated");
+        const { data, error } = await client
           .from("courses")
           .select("editor_state")
           .eq("id", course.id)
-          .eq("user_id", userData.user.id)
+          .eq("user_id", user.id)
           .single();
-
-        if (error) {
-          toast.error("Failed to load course notes, " + error.message);
-          return;
+        if (error) throw error;
+        if (active) {
+          setNotes(data?.editor_state ?? emptyNotes);
+          setLoadError(false);
         }
-
-        if (data?.editor_state) {
-          setEditorState(data.editor_state as SerializedEditorState);
-          setEditorKey((key) => key + 1);
-        }
-      } catch (err) {
-        console.error("Unexpected error loading course notes", err);
+      } catch {
+        if (active) setLoadError(true);
       } finally {
-        setNotesLoading(false);
+        if (active) setLoading(false);
       }
     };
-
-    loadNotes();
-  }, [course?.id, supabase]);
-
-  if (loading) {
-    return <CenteredSpinner />;
-  }
-
-  if (!course || !program) {
-    return null; // render nothing while redirecting
-  }
-
-  const programAverage =
-    courses
-      .filter(
-        (c) =>
-          c.program_id === program.id &&
-          c.grade !== null &&
-          c.grade !== undefined
-      )
-      .reduce(
-        (acc, c) => acc + (((c.grade as number) * c.credits) as number),
-        0
-      ) /
-    courses
-      .filter(
-        (c) =>
-          c.program_id === program.id &&
-          c.grade !== null &&
-          c.grade !== undefined
-      )
-      .reduce((acc, c) => acc + c.credits, 0);
-
-  const handleSaveNotes = async () => {
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [client, course.id, retry]);
+  const saveNotes = async () => {
+    if (loading || saving || loadError) return;
     setSaving(true);
     try {
-      const { data: userResult, error: userError } = await supabase.auth.getUser();
-      if (userError || !userResult.user) {
-        toast.error("Not authenticated");
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+      if (authError || !user) {
+        toast.error("Please log in again to save your notes");
         return;
       }
-
-      const { error } = await supabase
+      const { error } = await client
         .from("courses")
-        .update({ editor_state: editorState })
+        .update({ editor_state: notes })
         .eq("id", course.id)
-        .eq("user_id", userResult.user.id);
-
+        .eq("user_id", user.id);
       if (error) {
-        toast.error(error.message ?? "Failed to save notes");
+        toast.error(error.message);
         return;
       }
-
       toast.success("Notes saved");
-    } catch (err) {
-      console.error(err);
-      toast.error("Unexpected error while saving notes");
+    } catch {
+      toast.error("Could not save your notes. Please try again.");
     } finally {
       setSaving(false);
     }
   };
-
   return (
-    <div className="space-y-6 px-4 py-6 sm:px-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{course.name}</p>
-          <h1 className="text-2xl font-semibold leading-tight">
+    <section
+      aria-labelledby="course-notes-title"
+      className="min-w-0 overflow-hidden rounded-xl border bg-card shadow-xs"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-5 sm:px-6">
+        <div>
+          <h2
+            id="course-notes-title"
+            className="text-lg font-semibold tracking-tight"
+          >
+            Course notes
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Your ideas, lecture notes, and reference material, saved to this
+            course.
+          </p>
+        </div>
+        <Button
+          onClick={() => void saveNotes()}
+          disabled={loading || saving || loadError}
+        >
+          {saving ? (
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+          ) : (
+            <Save aria-hidden="true" />
+          )}
+          {saving ? "Saving…" : "Save notes"}
+        </Button>
+      </div>
+      {loading ? (
+        <div
+          role="status"
+          aria-label="Loading course notes"
+          className="space-y-4 p-6"
+        >
+          <Skeleton className="h-8 w-1/2" />
+          <Skeleton className="h-4" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-64" />
+        </div>
+      ) : loadError ? (
+        <div
+          role="alert"
+          className="flex flex-col items-center gap-3 p-10 text-center"
+        >
+          <FileText
+            aria-hidden="true"
+            className="size-6 text-muted-foreground"
+          />
+          <p className="text-sm font-medium">Your notes couldn’t be loaded.</p>
+          <p className="text-xs text-muted-foreground">
+            Try again before making any changes.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setLoading(true);
+              setRetry((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : (
+        <div className="min-w-0 [&>div]:rounded-none [&>div]:border-0 [&>div]:shadow-none [&_[contenteditable]]:h-auto [&_[contenteditable]]:max-h-[65dvh] [&_[contenteditable]]:min-h-96 [&_[contenteditable]]:px-5 sm:[&_[contenteditable]]:px-8">
+          <Editor editorSerializedState={notes} onSerializedChange={setNotes} />
+        </div>
+      )}
+      <div className="border-t bg-muted/15 px-5 py-3 text-[11px] leading-5 text-muted-foreground sm:px-6">
+        Use / for formatting commands. Save your notes before leaving this page.
+      </div>
+    </section>
+  );
+}
+
+export default function CourseDetail() {
+  const { id } = useParams<{ id: string }>();
+  const { courses, studyPrograms, examinations, loading, preferences } =
+    useData();
+  const course = courses.find((course) => course.id === id);
+  const program = studyPrograms.find(
+    (program) => program.id === course?.program_id,
+  );
+  if (loading) return <OverviewLoading />;
+  if (!course)
+    return (
+      <div className="mx-auto max-w-7xl space-y-4 p-8">
+        <h1 className="text-2xl font-semibold">Course not found</h1>
+        <Button asChild variant="outline">
+          <Link href="/app/courses">Back to courses</Link>
+        </Button>
+      </div>
+    );
+  const programGrades = courses.filter(
+    (other) =>
+      other.program_id === course.program_id &&
+      other.grade != null &&
+      other.credits > 0,
+  );
+  const totalCredits = programGrades.reduce(
+    (sum, other) => sum + other.credits,
+    0,
+  );
+  const average = totalCredits
+    ? programGrades.reduce(
+        (sum, other) => sum + other.grade! * other.credits,
+        0,
+      ) / totalCredits
+    : null;
+  const lowerIsBetter =
+    (preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5);
+  const comparison =
+    course.grade == null
+      ? "No result recorded yet"
+      : average === null
+        ? "Course result"
+        : course.grade === average
+          ? "Equal to program average"
+          : (lowerIsBetter ? course.grade < average : course.grade > average)
+            ? "Better than program average"
+            : "Below program average";
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-5 sm:space-y-8 sm:p-8 lg:p-10">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="min-w-0">
+          <Link
+            href="/app/courses"
+            className="mb-5 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft aria-hidden="true" className="size-3.5" />
+            All courses
+          </Link>
+          <h1 className="text-3xl font-semibold tracking-[-0.04em] break-words sm:text-4xl">
             {course.name}
           </h1>
-          <p className="text-sm text-muted-foreground">{program.name}</p>
+          <p className="mt-3 font-mono text-xs text-muted-foreground">
+            {course.course_code || "Course details & notes"}
+          </p>
         </div>
-        <CourseForm course={course} />
+        <div className="w-fit shrink-0">
+          <CourseForm course={course} />
+        </div>
       </div>
-      <div className="grid gap-3 grid-cols-3">
-        <Info label="Course Code" value={course.course_code} />
-        <Info label="Credits" value={course.credits} />
-        <div className="rounded-md border p-3 text-sm">
-          <p className="text-muted-foreground">Grade</p>
-          <div className="flex justify-center gap-4">
-            {course.grade ? (
-              <>
-                <Tooltip>
-                  {!Number.isNaN(programAverage) ? (
-                    ((preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5)
-                      ? programAverage < course.grade
-                      : programAverage > course.grade) ? (
-                      <>
-                        <TooltipTrigger asChild>
-                          <span className="text-red-500 font-medium">▲</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Worse than program average</p>
-                        </TooltipContent>
-                      </>
-                    ) : ((preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5)
-                      ? programAverage > course.grade
-                      : programAverage < course.grade) ? (
-                      <>
-                        <TooltipTrigger asChild>
-                          <span className="text-green-500 font-medium">▼</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Better than program average</p>
-                        </TooltipContent>
-                      </>
-                    ) : (
-                      <>
-                        <TooltipTrigger asChild>
-                          <span className="text-yellow-500 font-medium">▶</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Equal to program average</p>
-                        </TooltipContent>
-                      </>
-                    )
-                  ) : null}
-                </Tooltip>
-                <div>{course.grade}</div>
-              </>
+      <OverviewStats
+        items={[
+          {
+            label: "Credits",
+            value: course.credits,
+            detail: "ECTS for this course",
+          },
+          {
+            label: "Grade",
+            value: formatGrade(course.grade),
+            detail: summarizeExaminations(
+              examinations.filter((exam) => exam.course_id === course.id),
+            ).provisional
+              ? "Provisional — examination results missing"
+              : comparison,
+          },
+          {
+            label: getStudyPeriodLabel(preferences, { capitalized: true }),
+            value: course.semesters,
+            detail: formatStudyPeriod(preferences, course.semesters, {
+              capitalized: true,
+            }),
+          },
+          {
+            label: "Status",
+            value: (
+              <Badge
+                variant={course.finished ? "secondary" : "outline"}
+                className="text-xs font-normal"
+              >
+                {course.finished ? "Completed" : "In progress"}
+              </Badge>
+            ),
+            detail: course.finished
+              ? "Included in earned credits"
+              : "Part of your study plan",
+          },
+        ]}
+      />
+      <div className="grid divide-y overflow-hidden rounded-xl border bg-card shadow-xs md:grid-cols-2 md:divide-x md:divide-y-0">
+        <div className="p-5">
+          <p className="mb-3 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+            Study program
+          </p>
+          {program ? (
+            <Link
+              href={`/app/programs/${program.id}`}
+              className="group flex items-center gap-3"
+            >
+              <span className="rounded-lg border bg-muted/30 p-2">
+                <GraduationCap
+                  aria-hidden="true"
+                  className="size-4 text-teal-700 dark:text-teal-400"
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium break-words">
+                  {program.name}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {program.degree}
+                </p>
+              </div>
+              <ArrowRight
+                aria-hidden="true"
+                className="size-4 shrink-0 transition-transform group-hover:translate-x-1"
+              />
+            </Link>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Program details are unavailable.
+            </p>
+          )}
+        </div>
+        <div className="p-5">
+          <p className="mb-3 text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+            Course tags
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {course.tags?.length ? (
+              course.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="max-w-full whitespace-normal break-all font-normal"
+                >
+                  {tag}
+                </Badge>
+              ))
             ) : (
-              <span className="text-muted-foreground">N/A</span>
+              <p className="text-xs leading-6 text-muted-foreground">
+                Add tags in course settings to organize your library.
+              </p>
             )}
           </div>
-          <div className="mt-2 flex justify-center"></div>
         </div>
       </div>
-      <div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-md border p-3 text-sm">
-            <p className="text-muted-foreground">Corresponding Program</p>
-            <p className="font-medium">
-              <Link href={"/app/programs/" + program.id} className="inline-flex items-center gap-1 hover:underline">
-                {program.degree} | {program.name}
-                <ExternalLinkIcon className="size-3.5" />
-              </Link>
-            </p>
-          </div>
-          <div className="rounded-md border p-3 text-sm">
-            <p className="text-muted-foreground">Tags</p>
-            <p className="font-medium">
-              {course.tags && course.tags.length > 0
-                ? course.tags.join(", ")
-                : "N/A"}
-            </p>
-          </div>
-        </div>
-      </div>
-      <h2 className="text-lg font-semibold">Course Notes</h2>
-      <div className="flex items-center gap-3">
-        <Button onClick={handleSaveNotes} disabled={saving || notesLoading} className="hover:cursor-pointer">
-          {notesLoading ? "Loading notes..." : saving ? "Saving..." : "Save Notes"}
-        </Button>
-        <p className="text-sm text-muted-foreground">Notes are saved to this course.</p>
-      </div>
-      <Editor
-        key={editorKey}
-        editorSerializedState={editorState}
-        onSerializedChange={(value) => setEditorState(value)}
-      />
+      <CourseExaminations course={course} />
+      <CourseNotes key={course.id} course={course} />
     </div>
   );
 }

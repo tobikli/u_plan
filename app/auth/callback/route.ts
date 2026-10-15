@@ -1,42 +1,29 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { authOrigin, safeAuthPath } from "@/lib/auth-redirect";
+import { privateAuthHeaders } from "@/lib/auth-response";
 
 export async function GET(request: Request) {
-  const url = new URL(request.url)
-  const searchParams = url.searchParams
-
-  const code = searchParams.get('code')
-  let next = searchParams.get('next') ?? '/'
-
-  // Ensure relative path
-  if (!next.startsWith('/')) next = '/'
-
-  // Determine public origin safely
-  const forwardedHost = request.headers.get('x-forwarded-host') || process.env.NEXT_PUBLIC_SITE_URL?.replace(/^https?:\/\//, '')
-  const proto = request.headers.get('x-forwarded-proto') || 'https'
-  const externalHost = forwardedHost || url.host || 'localhost:3000'
-  const publicOrigin = `${proto}://${externalHost}`
-
+  const url = new URL(request.url);
+  const origin = authOrigin(
+    request.url,
+    process.env.SITE_URL || process.env.NEXT_PUBLIC_SITE_URL,
+  );
+  const next = safeAuthPath(url.searchParams.get("next"), origin);
+  const code = url.searchParams.get("code");
   if (code) {
-    const supabase = await createClient()
+    const supabase = await createClient();
     try {
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (!error) {
-        const redirectUrl = new URL(next, publicOrigin).toString()
-        return NextResponse.redirect(redirectUrl)
-      }
-    } catch (err) {
-      console.error('Supabase callback error:', err)
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (!error)
+        return NextResponse.redirect(new URL(next, origin), {
+          headers: privateAuthHeaders,
+        });
+    } catch {
+      // Do not include authorization codes or session details in logs.
     }
   }
-
-  // Fallback redirect
-  let fallbackRedirect: string
-  try {
-    fallbackRedirect = new URL('/auth/auth-code-error', publicOrigin).toString()
-  } catch {
-    fallbackRedirect = `${publicOrigin}/`
-  }
-
-  return NextResponse.redirect(fallbackRedirect)
+  return NextResponse.redirect(new URL("/auth/auth-code-error", origin), {
+    headers: privateAuthHeaders,
+  });
 }

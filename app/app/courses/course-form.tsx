@@ -1,19 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconPlus } from "@tabler/icons-react";
+import Link from "next/link";
+import { Plus, LoaderCircle } from "lucide-react";
+import type { StudyProgram } from "@/types/study-program";
+import { FormDialog } from "@/components/workspace/form-dialog";
+import { EditSection } from "@/components/workspace/edit-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,14 +27,23 @@ import { TagInput } from "./tag-input";
 
 export function CourseForm({
   trigger,
+  program: fixedProgram,
 }: {
   trigger?: React.ReactNode;
+  program?: StudyProgram;
 }) {
+  const fieldId = useId();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [programId, setProgramId] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const { studyPrograms, loading: loadingPrograms, preferences, courses } = useData();
+  const {
+    studyPrograms,
+    loading: loadingPrograms,
+    preferences,
+    courses,
+    refreshCourses,
+  } = useData();
   const studyPeriodLabel = getStudyPeriodLabel(preferences, {
     capitalized: true,
   });
@@ -55,21 +60,21 @@ export function CourseForm({
           courses
             .flatMap((c) => c.tags || [])
             .map((t) => t.trim())
-            .filter(Boolean)
-        )
+            .filter(Boolean),
+        ),
       ).sort((a, b) => a.localeCompare(b)),
-    [courses]
+    [courses],
   );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       const form = new FormData(e.currentTarget);
 
       const name = form.get("name")?.toString().trim() ?? "";
       const course_code = form.get("code")?.toString().trim() ?? "";
-      const gradeRaw = form.get("grade")?.toString().trim() ?? "";
       const semestersRaw = form.get("semester")?.toString().trim() ?? "";
       const creditsRaw = form.get("credits")?.toString().trim() ?? "";
       const finishedRaw = form.get("finished")?.toString().trim() ?? "";
@@ -77,7 +82,6 @@ export function CourseForm({
 
       const finished = finishedRaw === "on" ? true : false;
 
-      const grade = gradeRaw ? Number(gradeRaw) : null;
       const semesters = Number(semestersRaw);
       const credits = Number(creditsRaw);
       const tagList = selectedTags;
@@ -115,7 +119,6 @@ export function CourseForm({
         program_id: program,
         course_code,
         name,
-        grade,
         semesters,
         credits,
         finished,
@@ -127,6 +130,7 @@ export function CourseForm({
         return;
       }
 
+      await refreshCourses();
       setOpen(false);
       toast.success("Course added!");
       router.refresh();
@@ -138,122 +142,200 @@ export function CourseForm({
     }
   };
 
+  const changeOpen = (next: boolean) => {
+    if (submitting) return;
+    if (next) {
+      setSelectedTags([]);
+      setProgramId(
+        fixedProgram?.id ??
+          (studyPrograms.length === 1 ? studyPrograms[0].id : ""),
+      );
+    }
+    setOpen(next);
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant="outline" className="hover:cursor-pointer">
-            <IconPlus />
+          <Button variant="outline">
+            <Plus aria-hidden="true" />
+            Add a course
           </Button>
         )}
       </DialogTrigger>
-
-      <DialogContent className="sm:max-w-[425px] ">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add Course</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 my-5">
-            <div className="grid gap-3">
-              <Label htmlFor="program">Program</Label>
+      <FormDialog
+        title="Add a course"
+        eyebrow="New course"
+        description={
+          fixedProgram
+            ? `Add a course to ${fixedProgram.name}.`
+            : "Connect a course to your program and start tracking your progress."
+        }
+        onSubmit={handleSubmit}
+        busy={submitting}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={submitting}
+              onClick={() => changeOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                submitting ||
+                loadingPrograms ||
+                !studyPrograms.length ||
+                !programId
+              }
+            >
+              {submitting ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
+                  Adding…
+                </>
+              ) : (
+                "Add course"
+              )}
+            </Button>
+          </>
+        }
+      >
+        {!loadingPrograms && !studyPrograms.length && (
+          <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+            <p className="font-medium">Create a program first</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Every course belongs to a study program.
+            </p>
+            <Link
+              href="/app/programs"
+              onClick={() => changeOpen(false)}
+              className="mt-3 inline-block text-xs font-medium underline underline-offset-4"
+            >
+              Go to programs
+            </Link>
+          </div>
+        )}
+        <EditSection title="Course details">
+          <div className="grid gap-2">
+            <Label htmlFor={`${fieldId}-name`}>Course name</Label>
+            <Input
+              id={`${fieldId}-name`}
+              name="name"
+              placeholder="Algorithms & Data Structures"
+              required
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-[0.65fr_1.35fr]">
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-code`}>Course code</Label>
+              <Input
+                id={`${fieldId}-code`}
+                name="code"
+                placeholder="CS 201"
+                required
+              />
+            </div>
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-program`}>Study program</Label>
               <Select
                 value={programId}
                 onValueChange={setProgramId}
-                disabled={loadingPrograms || studyPrograms.length === 0}
+                disabled={
+                  !!fixedProgram || loadingPrograms || !studyPrograms.length
+                }
               >
-                <SelectTrigger className="w-full justify-between">
+                <SelectTrigger
+                  id={`${fieldId}-program`}
+                  className="w-full min-w-0"
+                >
                   <SelectValue
                     placeholder={
-                      loadingPrograms ? "Loading..." : "Select a program"
+                      loadingPrograms ? "Loading…" : "Choose a program"
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
                   {studyPrograms.map((program) => (
                     <SelectItem key={program.id} value={program.id}>
-                      {program.degree} {program.name}
+                      {program.degree} · {program.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <input type="hidden" name="program" value={programId} />
-            </div>
-            <div className="flex gap-3">
-              <div className="grid gap-3">
-                <Label htmlFor="code">Code</Label>
-                <Input className="max-w-40" id="code" name="code" placeholder="IN0001" required />
-              </div>
-              <div className="grid gap-3 w-full">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Introduction to Informatics"
-                  required
-                  className="w-full"
-                />
-              </div>
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="credits">Credits</Label>
-              <Input
-                id="credits"
-                name="credits"
-                placeholder="6"
-                type="number"
-                required
-              />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="grade">Grade</Label>
-              <Input
-                id="grade"
-                name="grade"
-                placeholder="1.0"
-                type="number"
-                step="0.1"
-                min={Math.min(preferences?.grade_min ?? 1.0, preferences?.grade_max ?? 5.0)}
-                max={Math.max(preferences?.grade_min ?? 1.0, preferences?.grade_max ?? 5.0)}
-              />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="semester">{studyPeriodLabel}</Label>
-              <Input
-                id="semester"
-                name="semester"
-                placeholder="1"
-                type="number"
-                inputMode="numeric"
-                min="1"
-                required
-              />
-            </div>
-
-            <TagInput
-              selected={selectedTags}
-              onChange={setSelectedTags}
-              available={availableTags}
-              placeholder="Press Enter to add tag"
-            />
-
-            <div className="flex items-center gap-3 my-2">
-              <Checkbox id="finished" name="finished" />
-              <Label htmlFor="finished">Finished?</Label>
             </div>
           </div>
-
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving..." : "Save Course"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+        </EditSection>
+        <div className="border-t" />
+        <EditSection
+          title="Credits & progress"
+          description="Add the course workload and where it fits in your studies."
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-credits`}>Credits (ECTS)</Label>
+              <Input
+                id={`${fieldId}-credits`}
+                name="credits"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="6"
+                required
+              />
+            </div>
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-semester`}>{studyPeriodLabel}</Label>
+              <Input
+                id={`${fieldId}-semester`}
+                name="semester"
+                type="number"
+                min="1"
+                max={fixedProgram?.semesters}
+                defaultValue="1"
+                required
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Course grades are calculated from examinations. Add results on the
+            course page.
+          </p>
+          <label
+            htmlFor={`${fieldId}-finished`}
+            className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/20 p-4"
+          >
+            <Checkbox
+              id={`${fieldId}-finished`}
+              name="finished"
+              className="mt-0.5"
+            />
+            <span>
+              <span className="block text-sm font-medium">
+                Already completed
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                Include these credits in your earned total.
+              </span>
+            </span>
+          </label>
+        </EditSection>
+        <div className="border-t" />
+        <EditSection title="Organization">
+          <TagInput
+            selected={selectedTags}
+            onChange={setSelectedTags}
+            available={availableTags}
+            placeholder="Type a tag and press Enter"
+          />
+        </EditSection>
+      </FormDialog>
     </Dialog>
   );
 }

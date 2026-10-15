@@ -8,4 +8,5 @@ export type Preferences = {
   created_at: string
   updated_at?: string | null
   trimester: boolean
+  semester_program_id?: string | null
 }

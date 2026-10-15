@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import { createClient } from "@supabase/supabase-js";
+import { createPrivilegedClient } from "@/lib/supabase/admin";
 
 export async function POST() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -9,7 +9,7 @@ export async function POST() {
   if (!url || !serviceRoleKey) {
     return NextResponse.json(
       { error: "Service role configuration missing" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -24,16 +24,14 @@ export async function POST() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const adminClient = createClient(url, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const adminClient = createPrivilegedClient();
 
   const { error } = await adminClient.auth.admin.deleteUser(userResult.user.id);
 
   if (error) {
     return NextResponse.json(
       { error: error.message ?? "Failed to delete account" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 

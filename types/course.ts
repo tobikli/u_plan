@@ -1,16 +1,15 @@
 export type Course = {
-  id: string
-  course_code: string
-  name: string
-  credits: number
-  grade?: number | null
-  program_id: string
-  semesters: number
-  finished: boolean
-  tags?: string[] | null
-  user_id: string
-  created_at: string
-  updated_at?: string | null
-  editor_state?: unknown | null
-}
-
+  id: string;
+  course_code: string;
+  name: string;
+  credits: number;
+  grade?: number | null;
+  program_id: string;
+  semesters: number;
+  finished: boolean;
+  tags?: string[] | null;
+  user_id: string;
+  created_at: string;
+  updated_at?: string | null;
+  editor_state?: unknown | null;
+};

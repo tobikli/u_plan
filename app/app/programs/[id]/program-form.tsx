@@ -1,29 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Pencil, LoaderCircle } from "lucide-react";
+import {
+  EditSection,
+  DeleteRecordButton,
+} from "@/components/workspace/edit-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DegreeDrop } from "../components/degreedrop";
@@ -40,10 +35,15 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
   const [name, setName] = useState(program.name);
   const [institution, setInstitution] = useState(program.institution);
   const [credits, setCredits] = useState(program.credits.toString());
+  const [currentSemester, setCurrentSemester] = useState(
+    program.current_semester.toString(),
+  );
+  const [finished, setFinished] = useState(program.finished);
+  const [description, setDescription] = useState(program.description ?? "");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const { refreshStudyPrograms, preferences } = useData();
+  const fieldId = useId();
+  const { refreshStudyPrograms, refreshCourses, preferences } = useData();
   const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
     plural: true,
     capitalized: true,
@@ -52,6 +52,7 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       const form = new FormData(e.currentTarget);
@@ -85,6 +86,14 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
         return;
       }
 
+      if (
+        !Number.isInteger(Number(currentSemester)) ||
+        Number(currentSemester) < 1 ||
+        Number(currentSemester) > semesters
+      ) {
+        toast.error("Current study period must be within the program length");
+        return;
+      }
       const supabase = createClient();
       const { data: userResult, error: userError } =
         await supabase.auth.getUser();
@@ -102,20 +111,21 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
           institution,
           semesters,
           credits,
-          current_semester: 1,
-          finished: false,
+          current_semester: Number(currentSemester),
+          finished,
           description: description || null,
         })
-        .eq("id", program.id);
+        .eq("id", program.id)
+        .eq("user_id", userResult.user.id);
 
       if (insertError) {
         toast.error(insertError.message ?? "Failed to save program");
         return;
       }
 
-      setDegree("");
       setOpen(false);
-      toast.success("Study program updated!");
+      await refreshStudyPrograms();
+      toast.success("Study program updated");
       router.refresh();
     } catch (err) {
       console.error(err);
@@ -125,146 +135,237 @@ export function ProgramForm({ program }: { program: StudyProgram }) {
     }
   };
 
-  const handleStudyDelete = async () => {
-    setDeleting(true);
-    try {
-      const supabase = createClient();
-      const { data: userResult, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userResult.user) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      const { error: deleteError } = await supabase
-        .from("study_programs")
-        .delete()
-        .eq("user_id", userResult.user.id)
-        .eq("id", program.id);
-
-      if (deleteError) {
-        toast.error(deleteError.message ?? "Failed to delete program");
-        return;
-      }
-
-      toast.success("Study program deleted");
-      refreshStudyPrograms();
-      router.push("/app/programs");
-      router.refresh();
-    } finally {
-      setDeleting(false);
+  const handleDelete = async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      toast.error("Please log in again to delete this program");
+      return false;
     }
+    const { error } = await supabase
+      .from("study_programs")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("id", program.id);
+    if (error) {
+      toast.error(error.message);
+      return false;
+    }
+    await Promise.all([refreshStudyPrograms(), refreshCourses()]);
+    setOpen(false);
+    toast.success("Study program deleted");
+    router.push("/app/programs");
+    router.refresh();
+    return true;
   };
-
+  const changeOpen = (next: boolean) => {
+    if (submitting) return;
+    if (next) {
+      setDegree(program.degree);
+      setName(program.name);
+      setInstitution(program.institution);
+      setSemesters(program.semesters.toString());
+      setCurrentSemester(program.current_semester.toString());
+      setCredits(program.credits.toString());
+      setFinished(program.finished);
+      setDescription(program.description ?? "");
+    }
+    setOpen(next);
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="hover:cursor-pointer">Edit Study Program</Button>
+        <Button variant="outline">
+          <Pencil aria-hidden="true" />
+          Edit program
+        </Button>
       </DialogTrigger>
-
-      <DialogContent className="sm:max-w-[425px] ">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Study Program</DialogTitle>
+      <DialogContent
+        className="max-h-[90dvh] overflow-hidden rounded-2xl p-0 sm:max-w-xl"
+        onInteractOutside={(event) => {
+          if (submitting) event.preventDefault();
+        }}
+      >
+        <form
+          onSubmit={handleSubmit}
+          className="flex max-h-[90dvh] min-h-0 flex-col"
+        >
+          <DialogHeader className="shrink-0 border-b bg-muted/20 px-6 py-5 pr-12 text-left">
+            <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+              Program settings
+            </p>
+            <DialogTitle className="text-xl tracking-tight">
+              Edit study program
+            </DialogTitle>
+            <DialogDescription>
+              Update program details, credit requirements, and completion
+              status.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 my-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-3">
-                <Label htmlFor="degree">Degree</Label>
-                <DegreeDrop
-                  value={degree}
-                  onChange={setDegree}
-                  className="w-full hover:cursor-pointer"
-                />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="semesters">{studyPeriodLabelPlural}</Label>
-                <Input
-                  id="semesters"
-                  name="semesters"
-                  value={semesters}
-                  onChange={(e) => setSemesters(e.target.value)}
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  required
-                  className="w-full"
-                />
-              </div>
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="institution">Institution</Label>
-              <Input
-                id="institution"
-                name="institution"
-                value={institution}
-                onChange={(e) => setInstitution(e.target.value)}
-              />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="credits">Credits / ECTS</Label>
-              <Input
-                id="credits"
-                name="credits"
-                value={credits}
-                onChange={(e) => setCredits(e.target.value)}
-                type="number"
-                inputMode="numeric"
-                min="0"
-                required
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
+          <div className="min-h-0 overflow-y-auto">
+            <fieldset
+              disabled={submitting}
+              className="min-w-0 space-y-6 px-6 py-5"
+            >
+              <EditSection title="Program details">
+                <div className="grid gap-2">
+                  <Label htmlFor={`${fieldId}-name`}>Program name</Label>
+                  <Input
+                    id={`${fieldId}-name`}
+                    name="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-[0.65fr_1.35fr]">
+                  <div className="grid content-start gap-2">
+                    <Label htmlFor={`${fieldId}-degree`}>Degree</Label>
+                    <DegreeDrop
+                      id={`${fieldId}-degree`}
+                      value={degree}
+                      onChange={setDegree}
+                    />
+                  </div>
+                  <div className="grid content-start gap-2">
+                    <Label htmlFor={`${fieldId}-institution`}>
+                      Institution
+                    </Label>
+                    <Input
+                      id={`${fieldId}-institution`}
+                      name="institution"
+                      value={institution}
+                      onChange={(e) => setInstitution(e.target.value)}
+                      placeholder="University or institution"
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor={`${fieldId}-description`}>
+                    Description{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      (optional)
+                    </span>
+                  </Label>
+                  <textarea
+                    id={`${fieldId}-description`}
+                    name="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    placeholder="What’s this program about?"
+                    className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                  />
+                </div>
+              </EditSection>
+              <div className="border-t" />
+              <EditSection
+                title="Study plan"
+                description="Set your credit goal and where you are in your program."
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid content-start gap-2">
+                    <Label htmlFor={`${fieldId}-semesters`}>
+                      Total {studyPeriodLabelPlural.toLowerCase()}
+                    </Label>
+                    <Input
+                      id={`${fieldId}-semesters`}
+                      name="semesters"
+                      type="number"
+                      min="1"
+                      value={semesters}
+                      onChange={(e) => setSemesters(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid content-start gap-2">
+                    <Label htmlFor={`${fieldId}-current`}>
+                      Current {getStudyPeriodLabel(preferences)}
+                    </Label>
+                    <Input
+                      id={`${fieldId}-current`}
+                      type="number"
+                      min="1"
+                      max={Number(semesters) || undefined}
+                      value={currentSemester}
+                      onChange={(e) => setCurrentSemester(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor={`${fieldId}-credits`}>
+                    Credit goal (ECTS)
+                  </Label>
+                  <Input
+                    id={`${fieldId}-credits`}
+                    name="credits"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={credits}
+                    onChange={(e) => setCredits(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Total credits needed to complete this program.
+                  </p>
+                </div>
+                <label
+                  htmlFor={`${fieldId}-finished`}
+                  className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/20 p-4"
                 >
-                  Delete Program
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Program?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This permanently deletes this program and its courses. This action
-                    cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
-                    onClick={handleStudyDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <span className="w-full"></span>
-
-            <DialogClose asChild>
-              <Button variant="outline" type="button" className="hover:cursor-pointer">
+                  <Checkbox
+                    id={`${fieldId}-finished`}
+                    checked={finished}
+                    onCheckedChange={(value) => setFinished(value === true)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">
+                      Mark program as completed
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                      Show this study track as finished in your overview.
+                    </span>
+                  </span>
+                </label>
+              </EditSection>
+            </fieldset>
+          </div>
+          <DialogFooter className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 border-t bg-muted/20 px-6 py-4 sm:justify-between">
+            <DeleteRecordButton
+              disabled={submitting}
+              kind="program"
+              name={program.name}
+              onDelete={handleDelete}
+            />
+            <div className="ml-auto flex gap-2">
+              <Button
+                variant="outline"
+                type="button"
+                disabled={submitting}
+                onClick={() => changeOpen(false)}
+              >
                 Cancel
               </Button>
-            </DialogClose>
-            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
-              {submitting ? "Saving..." : "Save Program"}
-            </Button>
+              <Button type="submit" disabled={submitting || !degree}>
+                {submitting ? (
+                  <>
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

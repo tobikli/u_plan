@@ -27,8 +27,16 @@ SERVICE_ROLE_KEY=your-supabase-service-role-key  # used only on the server
 ```
 
 ## Local Development
+With Nix, enter the development shell for Node.js 22, npm, and Git:
+
 ```bash
-npm install
+nix develop
+```
+
+Then install the locked dependencies and start the app (also works with your own Node.js installation):
+
+```bash
+npm ci
 npm run dev
 # open http://localhost:3000
 ```
@@ -40,6 +48,24 @@ npm run build
 npm start      # uses PORT or 3000
 ```
 
+## Semester overview and examinations
+
+Open **Semester** in the sidebar and choose a study program. The selection is saved to your account; the page uses that program's current semester (or trimester). It summarizes courses, completed courses, planned/earned ECTS, and examinations.
+
+Add or edit examinations from a semester course or its detail page. Each examination has a name, optional date and grade, and a positive relative weight. A course's grade is calculated in the database as `sum(grade * weight) / sum(weight)` for graded examinations. Missing results are excluded and the result is marked provisional. Course completion remains an explicit course setting.
+
+Examinations are the only source of course grades. Courses without graded examinations have no grade. Existing standalone grades are migrated into a single undated examination named after the course, with weight 100 (100% of the course result).
+
+Database migrations live in `supabase/migrations` (including the fetched remote baseline). For a linked project:
+
+```bash
+supabase db push --linked
+npm test
+supabase db query --linked -f supabase/tests/semester_examinations.sql
+```
+
+The SQL checks use temporary account fixtures inside a transaction and roll back all test data. Supabase link metadata in `supabase/.temp` is ignored.
+
 ## Notable Paths
 - `app/app/*`: authenticated dashboard (programs, courses, settings).
 - `auth*`: user management routes (e.g., `auth/delete` for account removal).
@@ -48,3 +74,11 @@ npm start      # uses PORT or 3000
 ## Deployment Notes
 - Do not expose `SERVICE_ROLE_KEY` on the client; it must be set as a server-side env var only.
 - Ensure all Supabase env vars are configured in your hosting platform.
+
+## Supabase data and sessions
+
+The authenticated layout verifies the user and loads workspace data with that request's cookie-based client. It passes the initial results into an account-scoped TanStack Query cache; failed datasets retry in the browser. Queries use owner filters, abort signals, and paginated reads so larger accounts are not silently truncated by the API response limit.
+
+Auth changes cancel pending requests and clear the previous account's cache. Realtime INSERT/UPDATE events update cached rows, while DELETE events remove matching cached primary keys (without depending on a deleted row's `user_id`). Reconnecting or returning to the window refreshes the workspace to recover missed events. Mutation refreshes use the same query cache.
+
+Set `SITE_URL` (or `NEXT_PUBLIC_SITE_URL`) to the canonical public origin, such as `https://plan.example.com`. Auth callbacks ignore forwarded host headers and allow only local redirect paths. The proxy preserves refreshed cookies and cache headers, including on redirects. Privileged clients live in `lib/supabase/admin.ts`, which is guarded by `server-only`; browser code uses the publishable key and RLS.

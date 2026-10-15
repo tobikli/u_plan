@@ -21,8 +21,10 @@ export function NavPrograms() {
   }
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Your Programs</SidebarGroupLabel>
+    <SidebarGroup className="px-4">
+      <SidebarGroupLabel className="text-[10px] tracking-widest uppercase">
+        Your programs
+      </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {studyPrograms.map((program) => (

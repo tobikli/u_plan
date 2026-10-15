@@ -48,7 +48,6 @@ export async function resetPassword(formData: FormData) {
       process.env.SITE_URL || "http://localhost:3000"
     }`,
   });
-  console.log("Reset password data:", data);
   return { data, error };
 }
 

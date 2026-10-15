@@ -1,223 +1,270 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
+import { useId, useState } from "react";
+import Link from "next/link";
+import { ArrowUpRight, LoaderCircle, LockKeyhole } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FormDialog } from "@/components/workspace/form-dialog";
+import {
+  EditSection,
+  DeleteRecordButton,
+} from "@/components/workspace/edit-dialog";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 
 export function AccountForm({ trigger }: { trigger?: React.ReactNode }) {
+  const fieldId = useId();
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [originalEmail, setOriginalEmail] = useState("");
   const [createdAt, setCreatedAt] = useState("");
-  const [resetPath, setResetPath] = useState("");
-
   const router = useRouter();
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (error || !data.user) return;
-      const user = data.user;
-      setEmail(user.email ?? "");
-      setCreatedAt(user.created_at ?? "");
-      setResetPath(
-        "/auth/update-password"
-      );
-      const metaName =
-        (user.user_metadata as { full_name?: string; name?: string } | null)
-          ?.full_name ??
-        (user.user_metadata as { full_name?: string; name?: string } | null)
-          ?.name ??
-        "";
-      setName(metaName);
-    });
-  }, []);
 
-  const handleAccountDelete = async () => {
-    setDeleting(true);
+  const loadAccount = async () => {
+    setLoading(true);
+    setLoadError(false);
     try {
-      const response = await fetch("/auth/delete", { method: "POST" });
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast.error(result.error ?? "Failed to delete account");
+      const {
+        data: { user },
+        error,
+      } = await createClient().auth.getUser();
+      if (error || !user) {
+        setLoadError(true);
         return;
       }
-
-      toast.success("Account deleted!");
-      const supabase = createClient();
-      await supabase.auth.signOut();
-      router.push("/auth/login");
-      router.refresh();
-    } catch (err) {
-      console.error(err);
-      toast.error("Unexpected error while deleting");
+      setName(user.user_metadata?.full_name ?? user.user_metadata?.name ?? "");
+      setEmail(user.email ?? "");
+      setOriginalEmail(user.email ?? "");
+      setCreatedAt(user.created_at ?? "");
+    } catch {
+      setLoadError(true);
     } finally {
-      setDeleting(false);
+      setLoading(false);
     }
   };
+  const changeOpen = (next: boolean) => {
+    if (submitting || deleting) return;
+    setOpen(next);
+    if (next) void loadAccount();
+  };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (submitting || loading || loadError) return;
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    if (!cleanName || !cleanEmail) {
+      toast.error("Enter your name and email address");
+      return;
+    }
     setSubmitting(true);
     try {
-      const form = new FormData(e.currentTarget);
-
-      const name = form.get("name")?.toString().trim() ?? "";
-      const email = form.get("email")?.toString().trim() ?? "";
-
-      if (!name) {
-        toast.error("Name is required");
-        setSubmitting(false);
-        return;
-      }
-
-      if (!email) {
-        toast.error("Email is required");
-        setSubmitting(false);
-        return;
-      }
-
-      const supabase = createClient();
-      const { data: userResult, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userResult.user) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({
-        email: email,
-        data: { name: name },
+      const emailChanged = cleanEmail !== originalEmail;
+      const { error } = await createClient().auth.updateUser({
+        ...(emailChanged ? { email: cleanEmail } : {}),
+        data: { name: cleanName, full_name: cleanName },
       });
-
       if (error) {
-        toast.error(error.message ?? "Failed to save program");
+        toast.error(error.message ?? "Failed to save account");
         return;
       }
-
       setOpen(false);
-      toast.success("Account saved!");
+      toast.success(
+        emailChanged
+          ? "Profile saved. Follow any email confirmation instructions."
+          : "Account updated",
+      );
       router.refresh();
-    } catch (err) {
-      console.error(err);
-      toast.error("Unexpected error while saving");
+    } catch {
+      toast.error("Unable to save your account. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
-
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const response = await fetch("/auth/delete", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.error ?? "Failed to delete account");
+        return false;
+      }
+      await createClient().auth.signOut();
+      setOpen(false);
+      toast.success("Account deleted");
+      router.push("/auth/login");
+      router.refresh();
+      return true;
+    } finally {
+      setDeleting(false);
+    }
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
         {trigger ?? <Button variant="outline">Account</Button>}
       </DialogTrigger>
-
-      <DialogContent className="sm:max-w-[425px] ">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Account Settings</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 my-5">
-            <div className="grid gap-3">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                name="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+      <FormDialog
+        title="Your account"
+        eyebrow="Personal settings"
+        description="Manage your profile, email address, and account security."
+        onSubmit={handleSubmit}
+        busy={submitting || deleting}
+        disabled={loading}
+        footer={
+          <>
+            <div className="mr-auto">
+              <DeleteRecordButton
+                kind="account"
+                name={originalEmail || "your account"}
+                disabled={loading || loadError || submitting || deleting}
+                onDelete={handleDelete}
               />
             </div>
-            <div className="grid gap-3">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
-            </div>
-            <div className="grid gap-3">
-              <a className="underline" href={resetPath}>
-                Update Password
-              </a>
-            </div>
-            <p className="text-sm font-extralight">
-              Account created on: {createdAt}
-            </p>
-          </div>
-          <DialogFooter>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  className="bg-red-500 hover:bg-red-700 text-white hover:cursor-pointer"
-                >
-                  Delete Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete account?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This permanently deletes your account and data. This action
-                    cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-red-500 hover:bg-red-700 text-white"
-                    onClick={handleAccountDelete}
-                    disabled={deleting}
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            <span className="w-full"></span>
-            <DialogClose asChild>
-              <Button variant="outline" type="button" className="hover:cursor-pointer">
+            <div className="ml-auto flex gap-2">
+              <Button
+                variant="outline"
+                type="button"
+                disabled={submitting || deleting}
+                onClick={() => changeOpen(false)}
+              >
                 Cancel
               </Button>
-            </DialogClose>
-            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
-              {submitting ? "Saving..." : "Save"}
+              <Button
+                type="submit"
+                disabled={loading || loadError || submitting || deleting}
+              >
+                {submitting ? (
+                  <>
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+            </div>
+          </>
+        }
+      >
+        {loading ? (
+          <div role="status" aria-label="Loading account" className="space-y-5">
+            <Skeleton className="h-16" />
+            <Skeleton className="h-16" />
+            <Skeleton className="h-24" />
+            <span className="sr-only">Loading account details…</span>
+          </div>
+        ) : loadError ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+          >
+            <p className="text-sm font-medium">
+              Your account details couldn’t be loaded.
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              Try again before making any changes.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => void loadAccount()}
+            >
+              Try again
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+          </div>
+        ) : (
+          <>
+            <EditSection title="Profile">
+              <div className="grid gap-2">
+                <Label htmlFor={`${fieldId}-name`}>Display name</Label>
+                <Input
+                  id={`${fieldId}-name`}
+                  name="name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  autoComplete="name"
+                  placeholder="Your name"
+                  required
+                />
+                <p className="text-xs leading-5 text-muted-foreground">
+                  The name shown in your workspace.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${fieldId}-email`}>Email address</Label>
+                <Input
+                  id={`${fieldId}-email`}
+                  name="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  required
+                  aria-describedby={`${fieldId}-email-help`}
+                />
+                <p
+                  id={`${fieldId}-email-help`}
+                  className="text-xs leading-5 text-muted-foreground"
+                >
+                  Changing your email may require confirmation. Follow any
+                  confirmation link sent to your inbox.
+                </p>
+              </div>
+            </EditSection>
+            <div className="border-t" />
+            <EditSection title="Security">
+              <Link
+                href="/auth/update-password"
+                className="group flex items-center gap-3 rounded-lg border bg-muted/20 p-4 transition-colors hover:bg-muted/40"
+              >
+                <span className="rounded-lg border bg-background p-2">
+                  <LockKeyhole aria-hidden="true" className="size-4" />
+                </span>
+                <span className="flex-1">
+                  <span className="block text-sm font-medium">
+                    Update password
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Choose a new password for your account.
+                  </span>
+                </span>
+                <ArrowUpRight
+                  aria-hidden="true"
+                  className="size-4 shrink-0 text-muted-foreground"
+                />
+              </Link>
+            </EditSection>
+            {createdAt && (
+              <p className="text-[11px] text-muted-foreground">
+                Member since{" "}
+                {new Date(createdAt).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
+            )}
+          </>
+        )}
+      </FormDialog>
     </Dialog>
   );
 }

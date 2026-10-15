@@ -1,12 +1,15 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { version } from "@/package.json";
 
 import {
   IconDashboard,
   IconSettings,
   IconCertificate,
   IconFileText,
+  IconCalendar,
 } from "@tabler/icons-react";
 import { ModeToggle } from "./theme-toggle";
 import { NavMain } from "@/components/nav-main";
@@ -29,6 +32,11 @@ export const navMainItems = [
     title: "Dashboard",
     url: "/app",
     icon: IconDashboard,
+  },
+  {
+    title: "Semester",
+    url: "/app/semester",
+    icon: IconCalendar,
   },
   {
     title: "Programs",
@@ -72,7 +80,7 @@ export function AppSidebar({
   };
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="px-4 pt-5 pb-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex items-center gap-2">
@@ -80,11 +88,12 @@ export function AppSidebar({
                 asChild
                 className="data-[slot=sidebar-menu-button]:p-1.5!"
               >
-                <a href="#">
+                <Link href="/app" aria-label="U_Plan dashboard">
                   <Logo className="size-6! text-black dark:text-white" />
-                  <span className="text-base font-semibold">U_PLAN</span>
-                  <p className="text-xs translate-y-0.5 text-gray-600 dark:text-gray-300">v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
-                </a>
+                  <span className="text-lg font-semibold tracking-tight">
+                    U_Plan.
+                  </span>
+                </Link>
               </SidebarMenuButton>
               <ModeToggle />
             </div>
@@ -96,8 +105,12 @@ export function AppSidebar({
         <NavPrograms />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t px-4 py-3">
         <NavUser user={user} />
+        <div className="flex items-center justify-between gap-3 px-2 text-[10px] text-muted-foreground">
+          <span>U_Plan · v{version}</span>
+          <Link href="/privacy" className="hover:text-foreground hover:underline hover:underline-offset-4">Privacy</Link>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

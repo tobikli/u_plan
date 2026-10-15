@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import {
+  UserRound,
+  GraduationCap,
+  SlidersHorizontal,
+  Sun,
+  LogOut,
+  LoaderCircle,
+  ArrowUpRight,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Card,
@@ -8,304 +17,442 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardAction,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/theme-toggle";
 import { LogoutButton } from "@/components/logout-button";
+import {
+  OverviewHeader,
+  OverviewLoading,
+} from "@/components/workspace/overview";
 import { AccountForm } from "../account-form";
 import { toast } from "sonner";
 import { useData } from "@/lib/data-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import CenteredSpinner from "@/components/ui/centered-spinner";
-import { getStudyPeriodLabel } from "@/lib/study-period";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
+/* The form follows saved preferences when the data provider refreshes them. */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-export default function Page() {
-  const [email, setEmail] = useState<string>("");
-  const [name, setName] = useState<string>("");
-  const [createdAt, setCreatedAt] = useState<string>("");
+const sections = [
+  { id: "account-settings", title: "Account", icon: UserRound },
+  { id: "study-settings", title: "Study structure", icon: GraduationCap },
+  { id: "grade-settings", title: "Grading", icon: SlidersHorizontal },
+  { id: "appearance-settings", title: "Appearance", icon: Sun },
+  { id: "session-settings", title: "Session", icon: LogOut },
+];
 
+export default function SettingsPage() {
+  const fieldId = useId();
   const { preferences, refreshPreferences, loading } = useData();
-  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
-    capitalized: true,
+  const [profile, setProfile] = useState({
+    name: "",
+    email: "",
+    createdAt: "",
   });
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (error || !data.user) return;
-      const user = data.user;
-      setEmail(user.email ?? "");
-      setCreatedAt(user.created_at ?? "");
-      const metaName =
-        (user.user_metadata as { full_name?: string; name?: string } | null)
-          ?.full_name ??
-        (user.user_metadata as { full_name?: string; name?: string } | null)
-          ?.name ??
-        "";
-      setName(metaName);
-    });
-  }, []);
-
-  const [gradeMin, setGradeMin] = useState<number>(preferences?.grade_min ?? 1);
-  const [gradeMax, setGradeMax] = useState<number>(preferences?.grade_max ?? 5);
-  const [gradePassed, setGradePassed] = useState<number>(
-    preferences?.grade_passed ?? 4,
+  const [gradeMin, setGradeMin] = useState(String(preferences?.grade_min ?? 1));
+  const [gradeMax, setGradeMax] = useState(String(preferences?.grade_max ?? 5));
+  const [gradePassed, setGradePassed] = useState(
+    String(preferences?.grade_passed ?? 4),
   );
-  const [gradeIncludeFailed, setGradeIncludeFailed] = useState<boolean>(
+  const [includeFailed, setIncludeFailed] = useState(
     preferences?.grade_include_failed ?? false,
   );
-  const [useTrimester, setSemesterToggle] = useState<boolean>(
-    preferences?.trimester ?? false,
-  );
-
+  const [trimester, setTrimester] = useState(preferences?.trimester ?? false);
+  const [saving, setSaving] = useState<"study" | "grades" | null>(null);
   useEffect(() => {
-    if (!preferences) return;
-    setGradeMin(preferences.grade_min ?? 1);
-    setGradeMax(preferences.grade_max ?? 5);
-    setGradePassed(preferences.grade_passed ?? 4);
-    setGradeIncludeFailed(preferences.grade_include_failed ?? false);
-    setSemesterToggle(preferences.trimester ?? false);
+    const client = createClient();
+    let active = true;
+    const apply = (user: {
+      email?: string;
+      created_at?: string;
+      user_metadata?: { full_name?: string; name?: string };
+    }) => {
+      if (active)
+        setProfile({
+          name: user.user_metadata?.full_name ?? user.user_metadata?.name ?? "",
+          email: user.email ?? "",
+          createdAt: user.created_at ?? "",
+        });
+    };
+    void client.auth
+      .getUser()
+      .then(({ data: { user } }) => {
+        if (user) apply(user);
+      })
+      .catch(() => {});
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) apply(session.user);
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+  useEffect(() => {
+    setGradeMin(String(preferences?.grade_min ?? 1));
+    setGradeMax(String(preferences?.grade_max ?? 5));
+    setGradePassed(String(preferences?.grade_passed ?? 4));
+    setIncludeFailed(preferences?.grade_include_failed ?? false);
+    setTrimester(preferences?.trimester ?? false);
   }, [preferences]);
-
-  if (loading) {
-    return <CenteredSpinner />;
-  }
-
-  const saveProgram = async () => {
-    const supabase = createClient();
-    const { data: userResult, error: userError } =
-      await supabase.auth.getUser();
-    if (userError || !userResult.user) {
-      toast.error("Could not get user information");
+  const save = async (kind: "study" | "grades") => {
+    if (saving) return;
+    const best = Number(gradeMin),
+      worst = Number(gradeMax),
+      pass = Number(gradePassed);
+    if (
+      kind === "grades" &&
+      (!gradeMin.trim() ||
+        !gradeMax.trim() ||
+        !gradePassed.trim() ||
+        ![best, worst, pass].every(Number.isFinite) ||
+        best === worst ||
+        pass < Math.min(best, worst) ||
+        pass > Math.max(best, worst))
+    ) {
+      toast.error(
+        "Use distinct best and worst grades, with the passing grade between them.",
+      );
       return;
     }
-
-    const { error } = await supabase
-      .from("preferences")
-      .update({
-        user_id: userResult.user.id,
-        grade_include_failed: gradeIncludeFailed,
-        trimester: useTrimester,
-      })
-      .eq("user_id", userResult.user.id);
-
-    if (error) {
-      toast.error("Failed to save program settings" + error.message);
-      return;
+    setSaving(kind);
+    try {
+      const client = createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+      if (authError || !user) {
+        toast.error("Please log in again to update your settings");
+        return;
+      }
+      const changes =
+        kind === "study"
+          ? { trimester }
+          : {
+              grade_min: best,
+              grade_max: worst,
+              grade_passed: pass,
+              grade_include_failed: includeFailed,
+            };
+      const { error } = await client
+        .from("preferences")
+        .update(changes)
+        .eq("user_id", user.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      await refreshPreferences();
+      toast.success(
+        kind === "study"
+          ? "Study preferences saved"
+          : "Grading preferences saved",
+      );
+    } catch {
+      toast.error("Could not save your preferences. Please try again.");
+    } finally {
+      setSaving(null);
     }
-    refreshPreferences();
-    toast.success("Program settings saved");
   };
-
-  const saveCourses = async () => {
-    const supabase = createClient();
-    const { data: userResult, error: userError } =
-      await supabase.auth.getUser();
-    if (userError || !userResult.user) {
-      toast.error("Could not get user information");
-      return;
-    }
-
-    //if (gradeMin >= gradeMax || gradePassed < gradeMin || gradePassed > gradeMax) {
-    //  toast.error("Invalid grade range");
-    //  return;
-    //}
-
-    const { error } = await supabase
-      .from("preferences")
-      .update({
-        user_id: userResult.user.id,
-        grade_min: gradeMin,
-        grade_max: gradeMax,
-        grade_passed: gradePassed,
-      })
-      .eq("user_id", userResult.user.id);
-
-    if (error) {
-      toast.error("Failed to save course settings" + error.message);
-      return;
-    }
-    refreshPreferences();
-    toast.success("Course settings saved");
-  };
-
+  if (loading) return <OverviewLoading />;
   return (
-    <div className="flex flex-col gap-6 m-5">
-      <div>
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage your account, theme, and other settings.
-        </p>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-            <CardDescription>
-              Update your profile and credentials.
-            </CardDescription>
-            <CardAction>
-              <AccountForm
-                trigger={
-                  <Button variant="outline" className="hover:cursor-pointer">
-                    Edit
-                  </Button>
-                }
-              />
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Name</span>
-              <span>{name || "-"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Email</span>
-              <span>{email || "-"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Created</span>
-              <span>
-                {createdAt ? new Date(createdAt).toLocaleDateString() : "-"}
-              </span>
-            </div>
-            <Button
-              asChild
-              variant="link"
-              className="px-0 text-primary hover:cursor-pointer"
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-5 sm:space-y-8 sm:p-8 lg:p-10">
+      <OverviewHeader
+        title="Settings"
+        description="Manage your account, study structure, grading scale, and appearance."
+        action={
+          <AccountForm
+            trigger={
+              <Button variant="outline">
+                <UserRound aria-hidden="true" />
+                Manage account
+              </Button>
+            }
+          />
+        }
+      />
+      <div className="grid items-start gap-6 xl:grid-cols-[200px_minmax(0,1fr)] xl:gap-10">
+        <nav
+          aria-label="Settings sections"
+          className="flex flex-wrap gap-1 border-b pb-4 xl:sticky xl:top-8 xl:flex-col xl:border-b-0 xl:pb-0"
+        >
+          <p className="mb-3 hidden px-3 text-[10px] font-medium tracking-widest text-muted-foreground uppercase xl:block">
+            Your preferences
+          </p>
+          {sections.map(({ id, title, icon: Icon }) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <a href="/auth/update-password">Update password</a>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Theme</CardTitle>
-            <CardDescription>
-              Switch between light, dark, or system.
-            </CardDescription>
-            <CardAction>
-              <ModeToggle />
-            </CardAction>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Theme preference applies across the dashboard.
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Study Program</CardTitle>
-            <CardDescription>
-              Preferences for your study programs.
-            </CardDescription>
-            <CardAction>
-              <Button
-                onClick={saveProgram}
-                variant="outline"
-                className="hover:cursor-pointer"
-              >
-                Save
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="flex items-center gap-3 my-2">
-              <Checkbox
-                checked={gradeIncludeFailed}
-                onCheckedChange={(checked) => setGradeIncludeFailed(!!checked)}
-                className="hover:cursor-pointer"
-              />
-              <Label htmlFor="gradeIncludeFailed">
-                Include failed courses in GPA calculation
-              </Label>
+              <Icon aria-hidden="true" className="size-4" />
+              {title}
+            </a>
+          ))}
+        </nav>
+        <div className="min-w-0 space-y-5">
+          <Card id="account-settings" className="scroll-mt-6 gap-5 shadow-xs">
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base tracking-tight">
+                    Account
+                  </CardTitle>
+                  <CardDescription className="mt-1.5">
+                    Your profile and sign-in details
+                  </CardDescription>
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  /01
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap items-center gap-4">
+                <span
+                  aria-hidden="true"
+                  className="flex size-12 shrink-0 items-center justify-center rounded-xl border bg-muted/40 text-lg font-semibold"
+                >
+                  {profile.name ? (
+                    profile.name.charAt(0).toUpperCase()
+                  ) : (
+                    <UserRound className="size-5" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium break-words">
+                    {profile.name || "Your account"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground break-all">
+                    {profile.email || "Manage your profile and email address"}
+                  </p>
+                </div>
+                <AccountForm
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      Edit profile <ArrowUpRight aria-hidden="true" />
+                    </Button>
+                  }
+                />
+              </div>
+              {profile.createdAt && (
+                <p className="mt-5 border-t pt-4 text-[11px] text-muted-foreground">
+                  Member since{" "}
+                  {new Date(profile.createdAt).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <Card id="study-settings" className="scroll-mt-6 gap-5 shadow-xs">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void save("study");
+              }}
+            >
+              <CardHeader className="pb-5">
+                <CardTitle className="text-base tracking-tight">
+                  Study structure
+                </CardTitle>
+                <CardDescription>
+                  The study periods used across your programs and courses
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col justify-between gap-4 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center">
+                  <div>
+                    <Label htmlFor={`${fieldId}-period`}>
+                      Study period system
+                    </Label>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Use the term structure that fits your university.
+                    </p>
+                  </div>
+                  <Select
+                    value={trimester ? "trimester" : "semester"}
+                    onValueChange={(value) =>
+                      setTrimester(value === "trimester")
+                    }
+                    disabled={!!saving}
+                  >
+                    <SelectTrigger
+                      id={`${fieldId}-period`}
+                      className="w-full bg-background sm:w-44"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="semester">Semesters</SelectItem>
+                      <SelectItem value="trimester">Trimesters</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                  <p className="text-[11px] text-muted-foreground">
+                    Applies to labels and study-period charts.
+                  </p>
+                  <Button type="submit" disabled={!!saving}>
+                    {saving === "study" ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="size-4 animate-spin"
+                      />
+                    ) : null}
+                    {saving === "study" ? "Saving…" : "Save study preferences"}
+                  </Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+          <Card id="grade-settings" className="scroll-mt-6 gap-5 shadow-xs">
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void save("grades");
+              }}
+            >
+              <CardHeader className="pb-5">
+                <CardTitle className="text-base tracking-tight">
+                  Grading
+                </CardTitle>
+                <CardDescription>
+                  Define your scale and how program averages are calculated.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <fieldset disabled={!!saving} className="space-y-5">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    {[
+                      {
+                        key: "best",
+                        label: "Best grade",
+                        value: gradeMin,
+                        set: setGradeMin,
+                      },
+                      {
+                        key: "worst",
+                        label: "Worst grade",
+                        value: gradeMax,
+                        set: setGradeMax,
+                      },
+                      {
+                        key: "pass",
+                        label: "Passing grade",
+                        value: gradePassed,
+                        set: setGradePassed,
+                      },
+                    ].map((field) => (
+                      <div key={field.key} className="grid content-start gap-2">
+                        <Label htmlFor={`${fieldId}-${field.key}`}>
+                          {field.label}
+                        </Label>
+                        <Input
+                          id={`${fieldId}-${field.key}`}
+                          type="number"
+                          step="any"
+                          value={field.value}
+                          onChange={(event) => field.set(event.target.value)}
+                          required
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Both ascending and descending scales are supported. The
+                    passing grade must fall within your scale.
+                  </p>
+                  <label
+                    htmlFor={`${fieldId}-failed`}
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/20 p-4"
+                  >
+                    <Checkbox
+                      id={`${fieldId}-failed`}
+                      checked={includeFailed}
+                      onCheckedChange={(checked) =>
+                        setIncludeFailed(checked === true)
+                      }
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">
+                        Include failed courses in averages
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        Count grades below the passing threshold in your
+                        program’s weighted average.
+                      </span>
+                    </span>
+                  </label>
+                </fieldset>
+                <div className="mt-5 flex justify-end border-t pt-4">
+                  <Button type="submit" disabled={!!saving}>
+                    {saving === "grades" ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="size-4 animate-spin"
+                      />
+                    ) : null}
+                    {saving === "grades"
+                      ? "Saving…"
+                      : "Save grading preferences"}
+                  </Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+          <Card
+            id="appearance-settings"
+            className="scroll-mt-6 gap-5 shadow-xs"
+          >
+            <CardHeader>
+              <CardTitle className="text-base tracking-tight">
+                Appearance
+              </CardTitle>
+              <CardDescription>
+                A comfortable view, day or night
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4">
+                <div>
+                  <p className="text-sm font-medium">Workspace theme</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Choose light, dark, or follow your system.
+                  </p>
+                </div>
+                <ModeToggle />
+              </div>
+            </CardContent>
+          </Card>
+          <div
+            id="session-settings"
+            className="flex scroll-mt-6 flex-wrap items-center justify-between gap-4 rounded-xl border bg-muted/20 p-5"
+          >
+            <div>
+              <h2 className="text-sm font-semibold">Your session</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Sign out of your workspace on this device.
+              </p>
             </div>
-          </CardContent>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="flex items-center gap-3 my-2">
-              <Checkbox
-                checked={useTrimester}
-                onCheckedChange={(checked) => setSemesterToggle(!!checked)}
-                className="hover:cursor-pointer"
-              />
-              <Label htmlFor="gradeIncludeFailed">
-                Use trimester system (3 terms per year)
-              </Label>
-            </div>
-            <p className="text-xs text-muted-foreground">Current system: {studyPeriodLabel}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Courses</CardTitle>
-            <CardDescription>Preferences for your courses.</CardDescription>
-            <CardAction>
-              <Button
-                onClick={saveCourses}
-                variant="outline"
-                className="hover:cursor-pointer"
-              >
-                Save
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <div className="flex justify-between">
-              <Label htmlFor="gradeMin">Best Possible Grade</Label>
-              <Input
-                id="gradeMin"
-                type="number"
-                step="0.1"
-                value={gradeMin}
-                onChange={(e) => setGradeMin(Number(e.target.value))}
-                className="mt-1 mb-3 w-40"
-              />
-            </div>
-            <div className="flex justify-between">
-              <Label htmlFor="gradeMax">Worst Possible Grade</Label>
-              <Input
-                id="gradeMax"
-                type="number"
-                step="0.1"
-                value={gradeMax}
-                onChange={(e) => setGradeMax(Number(e.target.value))}
-                className="mt-1 mb-3 w-40"
-              />
-            </div>
-            <div className="flex justify-between">
-              <Label htmlFor="gradePassed">Passing Grade</Label>
-              <Input
-                id="gradePassed"
-                type="number"
-                value={gradePassed}
-                step="0.1"
-                onChange={(e) => setGradePassed(Number(e.target.value))}
-                className="mt-1 mb-3 w-40"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Session</CardTitle>
-            <CardDescription>Sign out of your current session.</CardDescription>
-            <CardAction>
-              <LogoutButton />
-            </CardAction>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Logging out will end your session on this device.
-          </CardContent>
-        </Card>
+            <LogoutButton />
+          </div>
+        </div>
       </div>
     </div>
   );

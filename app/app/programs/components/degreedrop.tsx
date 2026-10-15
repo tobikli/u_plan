@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import * as React from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -12,14 +12,14 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command"
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 
-import { degreeType } from "@/types/study-program"
+import { degreeType } from "@/types/study-program";
 
 export const degreeTypes: degreeType[] = [
   "Bachelor",
@@ -29,21 +29,29 @@ export const degreeTypes: degreeType[] = [
   "Diploma",
   "Certificate",
   "Other",
-]
+];
 
 type DegreeDropProps = {
-  value: degreeType | ""
-  onChange: (value: degreeType | "") => void
-  className?: string
-}
+  id?: string;
+  value: degreeType | "";
+  onChange: (value: degreeType | "") => void;
+  className?: string;
+};
 
-export function DegreeDrop({ value, onChange, className }: DegreeDropProps) {
-  const [open, setOpen] = React.useState(false)
+export function DegreeDrop({
+  id,
+  value,
+  onChange,
+  className,
+}: DegreeDropProps) {
+  const [open, setOpen] = React.useState(false);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={id}
+          type="button"
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -57,7 +65,7 @@ export function DegreeDrop({ value, onChange, className }: DegreeDropProps) {
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
         <Command>
-          <CommandInput placeholder="Search framework..." className="h-9" />
+          <CommandInput placeholder="Search degrees…" className="h-9" />
           <CommandList>
             <CommandEmpty>No degree found.</CommandEmpty>
             <CommandGroup>
@@ -66,16 +74,16 @@ export function DegreeDrop({ value, onChange, className }: DegreeDropProps) {
                   key={degree}
                   value={degree}
                   onSelect={(currentValue) => {
-                    const next = currentValue === value ? "" : currentValue
-                    onChange(next as degreeType | "")
-                    setOpen(false)
+                    const next = currentValue === value ? "" : currentValue;
+                    onChange(next as degreeType | "");
+                    setOpen(false);
                   }}
                 >
                   {degree}
                   <Check
                     className={cn(
                       "ml-auto",
-                      value === degree ? "opacity-100" : "opacity-0"
+                      value === degree ? "opacity-100" : "opacity-0",
                     )}
                   />
                 </CommandItem>
@@ -85,5 +93,5 @@ export function DegreeDrop({ value, onChange, className }: DegreeDropProps) {
         </Command>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

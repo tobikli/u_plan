@@ -1,19 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Plus, LoaderCircle } from "lucide-react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/workspace/form-dialog";
+import { EditSection } from "@/components/workspace/edit-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DegreeDrop } from "./components/degreedrop";
@@ -23,12 +17,12 @@ import { toast } from "sonner";
 import { useData } from "@/lib/data-provider";
 import { getStudyPeriodLabel } from "@/lib/study-period";
 
-
 export function StudyForm() {
+  const fieldId = useId();
   const [degree, setDegree] = useState<degreeType | "">("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { preferences } = useData();
+  const { preferences, refreshStudyPrograms } = useData();
   const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
     plural: true,
     capitalized: true,
@@ -38,6 +32,7 @@ export function StudyForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     try {
       const form = new FormData(e.currentTarget);
@@ -98,6 +93,7 @@ export function StudyForm() {
         return;
       }
 
+      await refreshStudyPrograms();
       setDegree("");
       setOpen(false);
       toast.success("Study program created");
@@ -110,85 +106,133 @@ export function StudyForm() {
     }
   };
 
-  
-
+  const changeOpen = (next: boolean) => {
+    if (submitting) return;
+    if (next) setDegree("");
+    setOpen(next);
+  };
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="hover:cursor-pointer">New Study Program</Button>
+        <Button>
+          <Plus aria-hidden="true" />
+          Add a program
+        </Button>
       </DialogTrigger>
-
-      <DialogContent className="sm:max-w-[425px] ">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New Study Program</DialogTitle>
-            <DialogDescription>
-              Create your current or future study program here.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 my-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="grid gap-3">
-                <Label htmlFor="degree">Degree</Label>
-                <DegreeDrop
-                  value={degree}
-                  onChange={setDegree}
-                  className="w-full hover:cursor-pointer"
-                />
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="semesters">{studyPeriodLabelPlural}</Label>
-                <Input
-                  id="semesters"
-                  name="semesters"
-                  placeholder="6"
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  required
-                  className="w-full"
-                />
-              </div>
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" placeholder="Computer Science" />
-            </div>
-            <div className="grid gap-3">
-              <Label htmlFor="institution">Institution</Label>
-              <Input
-                id="institution"
-                name="institution"
-                placeholder="Technical University of Munich"
+      <FormDialog
+        title="Add a study program"
+        eyebrow="New study program"
+        description="Set up your study track. You can add courses and update your progress at any time."
+        onSubmit={handleSubmit}
+        busy={submitting}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={submitting}
+              onClick={() => changeOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting || !degree}>
+              {submitting ? (
+                <>
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-4 animate-spin"
+                  />
+                  Creating…
+                </>
+              ) : (
+                "Create program"
+              )}
+            </Button>
+          </>
+        }
+      >
+        <EditSection title="Program details">
+          <div className="grid gap-2">
+            <Label htmlFor={`${fieldId}-name`}>Program name</Label>
+            <Input
+              id={`${fieldId}-name`}
+              name="name"
+              placeholder="Computer Science"
+              required
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-[0.65fr_1.35fr]">
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-degree`}>Degree</Label>
+              <DegreeDrop
+                id={`${fieldId}-degree`}
+                value={degree}
+                onChange={setDegree}
               />
             </div>
-            <div className="grid gap-3">
-              <Label htmlFor="credits">Credits / ECTS</Label>
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-institution`}>Institution</Label>
               <Input
-                id="credits"
-                name="credits"
-                placeholder="180"
+                id={`${fieldId}-institution`}
+                name="institution"
+                placeholder="University or institution"
+              />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor={`${fieldId}-description`}>
+              Description{" "}
+              <span className="text-xs font-normal text-muted-foreground">
+                (optional)
+              </span>
+            </Label>
+            <textarea
+              id={`${fieldId}-description`}
+              name="description"
+              rows={3}
+              placeholder="What’s this program about?"
+              className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+            />
+          </div>
+        </EditSection>
+        <div className="border-t" />
+        <EditSection
+          title="Study plan"
+          description="Set your program’s length and credit goal."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-semesters`}>
+                Total {studyPeriodLabelPlural.toLowerCase()}
+              </Label>
+              <Input
+                id={`${fieldId}-semesters`}
+                name="semesters"
                 type="number"
-                inputMode="numeric"
+                min="1"
+                placeholder="6"
+                required
+              />
+            </div>
+            <div className="grid content-start gap-2">
+              <Label htmlFor={`${fieldId}-credits`}>Credit goal (ECTS)</Label>
+              <Input
+                id={`${fieldId}-credits`}
+                name="credits"
+                type="number"
                 min="0"
+                step="0.5"
+                placeholder="180"
                 required
               />
             </div>
           </div>
-
-          <DialogFooter>
-            
-            <DialogClose asChild>
-              <Button variant="outline" type="button" className="hover:cursor-pointer">
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit" disabled={submitting} className="hover:cursor-pointer">
-              {submitting ? "Saving..." : "Save Program"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+          <p className="rounded-lg border bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
+            New programs start in {getStudyPeriodLabel(preferences)} 1. You can
+            change your current study period in the program’s settings.
+          </p>
+        </EditSection>
+      </FormDialog>
     </Dialog>
   );
 }

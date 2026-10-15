@@ -25,7 +25,7 @@ export function NavSecondary({
   const pathname = usePathname();
 
   return (
-    <SidebarGroup {...props}>
+    <SidebarGroup {...props} className={`px-4 ${props.className ?? ""}`}>
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => (

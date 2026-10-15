@@ -1,36 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import type { StudyProgram } from "@/types/study-program";
-import { useData } from "@/lib/data-provider";
-import { ProgramForm } from "./program-form";
-import { CourseTable } from "./courses";
-import { getProgramCourseColumns } from "./columns";
-import { CourseForm } from "./course-form";
-import CenteredSpinner from "@/components/ui/centered-spinner";
-import { CircularProgress } from "@/components/customized/progress/progress-08";
-import { Button } from "@/components/ui/button";
-import { IconPlus, IconMinus } from "@tabler/icons-react";
-import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart";
-import {
-  formatStudyPeriod,
-  getStudyPeriodLabel,
-} from "@/lib/study-period";
+  ArrowLeft,
+  Building2,
+  GraduationCap,
+  Minus,
+  Plus,
+  LoaderCircle,
+} from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -40,482 +20,538 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useData } from "@/lib/data-provider";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { ProgramForm } from "./program-form";
+import { CourseForm } from "./course-form";
+import { CourseTable } from "@/app/app/courses/courses";
+import { getCourseColumns } from "@/app/app/courses/columns";
+import {
+  OverviewLoading,
+  OverviewStats,
+} from "@/components/workspace/overview";
+import { CircularProgress } from "@/components/customized/progress/progress-08";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { formatStudyPeriod, getStudyPeriodLabel } from "@/lib/study-period";
 
-function Info({ label, value }: { label: string; value: string | number }) {
+const chartConfig = {
+  credits: { label: "Credits", color: "var(--study-accent)" },
+  average: { label: "Average grade", color: "var(--study-accent)" },
+  count: { label: "Courses", color: "var(--study-accent)" },
+} satisfies ChartConfig;
+function EmptyTrend({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-md border p-3 text-sm">
-      <p className="text-muted-foreground">{label}</p>
-      <p className="font-medium">{value}</p>
+    <div className="flex h-56 items-center justify-center rounded-lg border border-dashed bg-muted/20 p-6 text-center text-sm leading-6 text-muted-foreground">
+      {children}
     </div>
   );
 }
 
 export default function StudyDetail() {
-  const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const { studyPrograms, courses, loading, preferences } = useData();
-  const studyPeriodLabel = getStudyPeriodLabel(preferences, {
-    capitalized: true,
-  });
-  const studyPeriodLabelPlural = getStudyPeriodLabel(preferences, {
-    plural: true,
-    capitalized: true,
-  });
-
-  const program = useMemo(
-    () => studyPrograms.find((p) => p.id === params.id),
-    [studyPrograms, params.id]
-  ) as StudyProgram | undefined;
-
+  const { id } = useParams<{ id: string }>();
+  const { studyPrograms, courses, loading, preferences, refreshStudyPrograms } =
+    useData();
+  const [updatingPeriod, setUpdatingPeriod] = useState(false);
+  const program = studyPrograms.find((program) => program.id === id);
   const programCourses = useMemo(
-    () => courses.filter((c) => c.program_id === params.id),
-    [courses, params.id]
+    () => courses.filter((course) => course.program_id === id),
+    [courses, id],
   );
-
-  const currentCredits = useMemo(
+  const columns = useMemo(
     () =>
-      programCourses
-        .filter(
-          (course) =>
-            course.grade !== null &&
-            course.credits > 0 &&
-            course.finished
-        )
-        .reduce((sum, course) => sum + course.credits, 0),
-    [programCourses]
+      getCourseColumns(preferences).filter((column) => column.id !== "program"),
+    [preferences],
   );
-
-  const progressPercent = useMemo(() => {
-    if (!program?.credits || program.credits <= 0) return 0;
-    const ratio = (currentCredits / program.credits) * 100;
-    return Math.min(100, Math.max(0, Math.round(ratio)));
-  }, [program, currentCredits]);
-
-  const averageGrade = useMemo(() => {
-    if (loading) return null; // wait until data (including preferences) is loaded
-    if (!preferences) return null;
-    if (programCourses.length === 0) return 0;
-    const relevantCourses = programCourses.filter(
-      (course) =>
-        course.grade !== null &&
-        course.credits > 0 &&
-        (preferences.grade_include_failed
-          ? true
-          : course.grade != null &&
-            (preferences.grade_min < preferences.grade_max
-              ? course.grade <= preferences.grade_passed
-              : course.grade >= preferences.grade_passed))
-    );
-
-    const totalWeightedGrades = relevantCourses.reduce(
-      (sum, course) => sum + course.grade! * course.credits,
-      0
-    );
-    const totalCredits = relevantCourses.reduce(
-      (sum, course) => sum + course.credits,
-      0
-    );
-    if (totalCredits === 0) return 0;
-    return totalWeightedGrades / totalCredits;
-  }, [programCourses, preferences, loading]);
-
-  const gradeBySemester = useMemo(() => {
-    const bySem = new Map<number, { sum: number; credits: number }>();
+  const studyPeriod = getStudyPeriodLabel(preferences);
+  const currentCredits = programCourses
+    .filter(
+      (course) => course.finished && course.credits > 0,
+    )
+    .reduce((sum, course) => sum + course.credits, 0);
+  const progress = program?.credits
+    ? Math.min(
+        100,
+        Math.max(0, Math.round((currentCredits / program.credits) * 100)),
+      )
+    : 0;
+  const best = preferences?.grade_min ?? 1;
+  const worst = preferences?.grade_max ?? 5;
+  const passed = preferences?.grade_passed ?? 4;
+  const graded = programCourses.filter(
+    (course) =>
+      course.grade != null &&
+      course.credits > 0 &&
+      (preferences?.grade_include_failed ||
+        (best < worst ? course.grade <= passed : course.grade >= passed)),
+  );
+  const gradedCredits = graded.reduce((sum, course) => sum + course.credits, 0);
+  const averageGrade = gradedCredits
+    ? graded.reduce((sum, course) => sum + course.grade! * course.credits, 0) /
+      gradedCredits
+    : null;
+  const periodData = useMemo(() => {
+    const periods = new Map<
+      number,
+      { credits: number; weighted: number; gradedCredits: number }
+    >();
     programCourses.forEach((course) => {
-      if (
-        course.grade === null ||
-        course.grade === undefined ||
-        !course.semesters ||
-        course.credits <= 0
-      ) {
-        return;
+      if (!course.semesters || course.credits <= 0) return;
+      const entry = periods.get(course.semesters) ?? {
+        credits: 0,
+        weighted: 0,
+        gradedCredits: 0,
+      };
+      entry.credits += course.credits;
+      if (course.grade != null) {
+        entry.weighted += course.grade * course.credits;
+        entry.gradedCredits += course.credits;
       }
-      const current = bySem.get(course.semesters) || { sum: 0, credits: 0 };
-      current.sum += course.grade * course.credits;
-      current.credits += course.credits;
-      bySem.set(course.semesters, current);
+      periods.set(course.semesters, entry);
     });
-
-    return Array.from(bySem.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([semester, { sum, credits }]) => ({
-        period: formatStudyPeriod(preferences, semester, { compact: true }),
-        average: credits > 0 ? Number((sum / credits).toFixed(2)) : null,
+    return [...periods.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([period, entry]) => ({
+        period: formatStudyPeriod(preferences, period, { compact: true }),
+        credits: entry.credits,
+        average: entry.gradedCredits
+          ? Number((entry.weighted / entry.gradedCredits).toFixed(2))
+          : null,
       }));
   }, [programCourses, preferences]);
-
-  const gradeDistribution = useMemo(() => {
+  const distribution = useMemo(() => {
     const counts = new Map<string, number>();
     programCourses.forEach((course) => {
-      if (course.grade === null || course.grade === undefined) return;
-      const key = course.grade.toFixed(1);
-      counts.set(key, (counts.get(key) || 0) + 1);
+      if (course.grade == null) return;
+      const grade = course.grade.toFixed(1);
+      counts.set(grade, (counts.get(grade) ?? 0) + 1);
     });
-
-    return Array.from(counts.entries())
+    return [...counts]
       .map(([grade, count]) => ({ grade, count }))
       .sort((a, b) => Number(a.grade) - Number(b.grade));
   }, [programCourses]);
 
-  const gradeBySemesterConfig: ChartConfig = {
-    average: {
-      label: "Avg grade",
-      color: "var(--chart-color)",
-    },
-  };
+  // Keep the existing credit-based completion behavior out of the render phase.
+  useEffect(() => {
+    if (loading || !program || program.credits <= 0) return;
+    const finished = currentCredits >= program.credits;
+    if (finished === program.finished) return;
+    let cancelled = false;
+    const syncStatus = async () => {
+      try {
+        const client = createClient();
+        const {
+          data: { user },
+        } = await client.auth.getUser();
+        if (!user || cancelled) return;
+        const { error } = await client
+          .from("study_programs")
+          .update({ finished })
+          .eq("user_id", user.id)
+          .eq("id", program.id);
+        if (cancelled) return;
+        if (error) {
+          toast.error("Could not update program completion");
+          return;
+        }
+        await refreshStudyPrograms();
+        if (finished)
+          toast.success(`You’ve reached the credit goal for ${program.name}!`);
+      } catch {
+        if (!cancelled) toast.error("Could not update program completion");
+      }
+    };
+    void syncStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [program, currentCredits, loading, refreshStudyPrograms]);
 
-  const creditsBySemester = useMemo(() => {
-    const bySem = new Map<number, number>();
-    programCourses.forEach((course) => {
-      if (!course.semesters || course.credits <= 0) return;
-      bySem.set(course.semesters, (bySem.get(course.semesters) || 0) + course.credits);
-    });
-    return Array.from(bySem.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([semester, credits]) => ({
-        period: formatStudyPeriod(preferences, semester, { compact: true }),
-        credits,
-      }));
-  }, [programCourses, preferences]);
-
-  const columns = useMemo(
-    () => getProgramCourseColumns(preferences),
-    [preferences]
-  );
-
-  const creditsBySemesterConfig: ChartConfig = {
-    credits: {
-      label: "Credits",
-      color: "var(--chart-color)",
-    },
-  };
-
-  const gradeDistributionConfig: ChartConfig = {
-    count: {
-      label: "Courses",
-      color: "var(--chart-color)",
-    },
-  };
-
-  if (loading) {
-    return <CenteredSpinner />;
-  }
-
-  if (!program) {
-    return null; // render nothing while redirecting
-  }
-
-  if (currentCredits >= program.credits && !program.finished) {
-    toast.success(
-      `Congratulations! You have completed the required credits for the program "${program.name}".`
+  if (loading) return <OverviewLoading />;
+  if (!program)
+    return (
+      <div className="mx-auto max-w-7xl space-y-4 p-8">
+        <h1 className="text-2xl font-semibold">Program not found</h1>
+        <Button asChild variant="outline">
+          <Link href="/app/programs">Back to programs</Link>
+        </Button>
+      </div>
     );
-    const updateProgram = async () => {
-      const supabase = createClient();
-      const { data: userResult, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userResult.user) {
-        toast.error("Not authenticated");
+  const updatePeriod = async (next: number) => {
+    if (updatingPeriod || next < 1 || next > program.semesters) return;
+    setUpdatingPeriod(true);
+    try {
+      const client = createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+      if (authError || !user) {
+        toast.error("Please log in again to update your study period");
         return;
       }
-
-      const { error } = await supabase
+      const { error } = await client
         .from("study_programs")
-        .update({ finished: true })
-        .eq("user_id", userResult.user.id)
-        .eq("id", program!.id);
-
+        .update({ current_semester: next })
+        .eq("user_id", user.id)
+        .eq("id", program.id);
       if (error) {
-        toast.error(error.message ?? "Failed to update program status");
+        toast.error(error.message);
         return;
       }
-    };
-    updateProgram();
-  }
-
-  if (currentCredits < program.credits && program.finished) {
-    const updateProgram = async () => {
-      const supabase = createClient();
-      const { data: userResult, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userResult.user) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      await supabase
-        .from("study_programs")
-        .update({ finished: false })
-        .eq("user_id", userResult.user.id)
-        .eq("id", program!.id);
-
-    };
-    updateProgram();
-  }
-
-  const updateSemester = async (newSemester: number) => {
-    const supabase = createClient();
-    const { data: userResult, error: userError } =
-      await supabase.auth.getUser();
-    if (userError || !userResult.user) {
-      toast.error("Not authenticated");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("study_programs")
-      .update({ current_semester: newSemester })
-      .eq("user_id", userResult.user.id)
-      .eq("id", program.id);
-
-    if (error) {
-      toast.error(error.message ?? `Failed to update ${studyPeriodLabel.toLowerCase()}`);
-      return;
-    }
-
-    router.refresh();
-  };
-
-  const increaseSemester = () => {
-    if (program.current_semester < program.semesters) {
-      updateSemester(program.current_semester + 1);
-      toast.success(`Yay, you advanced a ${studyPeriodLabel.toLowerCase()}!`);
+      await refreshStudyPrograms();
+      toast.success(
+        `${getStudyPeriodLabel(preferences, { capitalized: true })} updated`,
+      );
+    } catch {
+      toast.error("Could not update your study period");
+    } finally {
+      setUpdatingPeriod(false);
     }
   };
-
-  const decreaseSemester = () => {
-    if (program.current_semester > 1) {
-      updateSemester(program.current_semester - 1);
-    }
-  };
-
   return (
-    <div className="space-y-6 px-4 py-6 sm:px-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">{program.degree}</p>
-          <h1 className="text-2xl font-semibold leading-tight">
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-5 sm:space-y-8 sm:p-8 lg:p-10">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+        <div className="min-w-0">
+          <Link
+            href="/app/programs"
+            className="mb-5 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft aria-hidden="true" className="size-3.5" />
+            All programs
+          </Link>
+          <h1 className="text-3xl font-semibold tracking-[-0.04em] break-words sm:text-4xl">
             {program.name}
           </h1>
-          <p className="text-sm text-muted-foreground">{program.institution}</p>
+          <p className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+            <Building2 aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {program.institution || "Your study program"}
+          </p>
         </div>
-        <ProgramForm program={program} />
+        <div className="w-fit shrink-0">
+          <ProgramForm program={program} />
+        </div>
       </div>
-      <div className="grid gap-3 grid-cols-3">
-        <div className="rounded-md border p-3 text-sm">
-          <p className="text-muted-foreground">{studyPeriodLabel}</p>
-          <div className="flex">
-            <p className="font-medium">
-              {program.current_semester + "/" + program.semesters}
-            </p>
-            <span className="w-full"></span>
-            <div className=" flex gap-2">
-              <Button
-                onClick={decreaseSemester}
-                className="size-7 hover:cursor-pointer"
-                variant="outline"
-                disabled={program.current_semester <= 1}
-              >
-                <IconMinus />
-              </Button>
-              <Button
-                onClick={increaseSemester}
-                className="size-7 hover:cursor-pointer"
-                variant="outline"
-                disabled={program.current_semester >= program.semesters}
-              >
-                <IconPlus />
-              </Button>
+      <OverviewStats
+        items={[
+          {
+            label: "Courses",
+            value: programCourses.length,
+            detail: "Connected to this program",
+          },
+          {
+            label: "Credits earned",
+            value: currentCredits,
+            detail: `Of ${program.credits} required ECTS`,
+          },
+          {
+            label: "Average grade",
+            value: averageGrade !== null ? averageGrade.toFixed(2) : "—",
+            detail: "Weighted by course credits",
+          },
+          {
+            label: getStudyPeriodLabel(preferences, { capitalized: true }),
+            value: `${program.current_semester} / ${program.semesters}`,
+            detail: "Your current study period",
+          },
+        ]}
+      />
+      <div className="grid items-start gap-5 xl:grid-cols-12 xl:items-stretch">
+        <Card className="min-w-0 gap-5 border-teal-600/15 bg-linear-to-br from-teal-600/[0.06] to-card shadow-xs xl:col-span-4">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base tracking-tight">
+                Study progress
+              </CardTitle>
+              <Badge variant="secondary" className="text-[10px] font-normal">
+                {program.finished ? "Completed" : "In progress"}
+              </Badge>
             </div>
-          </div>
-        </div>
-        <Info label="Credits (total)" value={program.credits} />
-        <Info label="Finished" value={program.finished ? "Yes" : "No"} />
-      </div>
-      <div className="rounded-md border p-3 text-sm">
-        <p className="text-muted-foreground">Progress</p>
-        <div className=" grid grid-cols-2">
-          <CircularProgress
-            value={progressPercent}
-            size={120}
-            strokeWidth={10}
-            showLabel
-            renderLabel={(v) => `${v}%`}
-            labelClassName="text-xl font-bold"
-            className={progressPercent < 100 ? "stroke-orange-500/25" : "stroke-green-500/25"}
-            progressClassName={progressPercent < 100 ? "stroke-orange-700" : "stroke-green-700"}
-          />
-          <div className="flex items-center justify-center">
-            <p className="text-xl font-semibold border rounded-xl p-5 text-center">
-              {" "}
-              {currentCredits} / {program.credits} Credits
-            </p>
-          </div>
-        </div>
-      </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-
-      <div className="rounded-md border p-3 text-sm flex flex-col">
-        <p className="font-semibold">Grade</p>
-        <p className="text-muted-foreground">Average grade</p>
-        <p className="flex-1 text-center text-4xl font-semibold flex items-center justify-center">
-          {averageGrade?.toFixed(2)}
-        </p>
-      </div>
-      <Card className="h-full bg-black/0 overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle>{`Credits per ${studyPeriodLabel.toLowerCase()}`}</CardTitle>
+            <CardDescription>Your progress toward your degree</CardDescription>
+          </CardHeader>
+          <CardContent className="xl:flex xl:flex-1 xl:flex-col xl:justify-between xl:gap-6">
+            <div className="flex items-center gap-4">
+              <div className="aspect-square w-44 max-w-[55%] shrink-0 [&>div]:size-full [&_svg]:size-full">
+                <CircularProgress
+                  value={progress}
+                  size={176}
+                  strokeWidth={9}
+                  showLabel
+                  renderLabel={(value) => `${value}%`}
+                  labelClassName="text-2xl font-semibold sm:text-3xl"
+                  className="stroke-muted"
+                  progressClassName="stroke-teal-600 dark:stroke-teal-400"
+                />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold tracking-tight tabular-nums">
+                  {currentCredits}
+                  <span className="ml-1 text-sm font-normal text-muted-foreground">
+                    / {program.credits}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  ECTS earned
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4 xl:mt-0">
+              <div>
+                <p className="text-xs font-medium">
+                  {formatStudyPeriod(preferences, program.current_semester, {
+                    capitalized: true,
+                  })}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Adjust your current study period
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  aria-label={`Previous ${studyPeriod}`}
+                  onClick={() =>
+                    void updatePeriod(program.current_semester - 1)
+                  }
+                  disabled={updatingPeriod || program.current_semester <= 1}
+                >
+                  <Minus aria-hidden="true" />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  aria-label={`Next ${studyPeriod}`}
+                  onClick={() =>
+                    void updatePeriod(program.current_semester + 1)
+                  }
+                  disabled={
+                    updatingPeriod ||
+                    program.current_semester >= program.semesters
+                  }
+                >
+                  {updatingPeriod ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="size-4 animate-spin"
+                    />
+                  ) : (
+                    <Plus aria-hidden="true" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            {program.description && (
+              <p className="mt-4 border-t pt-4 text-xs leading-6 whitespace-pre-wrap text-muted-foreground xl:mt-0">
+                {program.description}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="min-w-0 gap-4 shadow-xs xl:col-span-8">
+          <CardHeader>
+            <CardTitle className="text-base tracking-tight">
+              Program statistics
+            </CardTitle>
+            <CardDescription>
+              Credits and grade patterns across your{" "}
+              {getStudyPeriodLabel(preferences, { plural: true })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {creditsBySemester.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{`No courses with ${studyPeriodLabelPlural.toLowerCase()} yet.`}</p>
-            ) : (
-              <div className="overflow-x-auto pb-2">
-                <div className="min-w-[320px]">
+            <Tabs defaultValue="credits" className="gap-4">
+              <TabsList
+                aria-label="Program charts"
+                className="grid w-full grid-cols-3"
+              >
+                <TabsTrigger value="credits" className="text-xs">
+                  Credits
+                </TabsTrigger>
+                <TabsTrigger value="grades" className="text-xs">
+                  Grades
+                </TabsTrigger>
+                <TabsTrigger value="distribution" className="text-xs">
+                  Distribution
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="credits">
+                {periodData.length ? (
                   <ChartContainer
-                    config={creditsBySemesterConfig}
-                    className="w-full h-[260px]"
+                    config={chartConfig}
+                    className="h-56 w-full aspect-auto"
+                    aria-label={`Credits per ${studyPeriod}`}
                   >
-                    <BarChart data={creditsBySemester}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <BarChart data={periodData} accessibilityLayer>
+                      <CartesianGrid vertical={false} strokeDasharray="3 5" />
                       <XAxis
                         dataKey="period"
-                        tickLine={false}
                         axisLine={false}
-                        tickMargin={8}
+                        tickLine={false}
+                        tickMargin={10}
                       />
                       <YAxis
-                        allowDecimals={false}
-                        tickLine={false}
-                        axisLine={false}
                         width={30}
+                        axisLine={false}
+                        tickLine={false}
+                        allowDecimals={false}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Bar
                         dataKey="credits"
                         fill="var(--color-credits)"
-                        radius={[6, 6, 0, 0]}
+                        radius={[5, 5, 0, 0]}
+                        maxBarSize={48}
+                        isAnimationActive={false}
                       />
                     </BarChart>
                   </ChartContainer>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="h-full bg-black/0 overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle>{`Average grade per ${studyPeriodLabel.toLowerCase()}`}</CardTitle>
-            <CardDescription>Weighted by credits</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {gradeBySemester.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No graded courses yet.</p>
-            ) : (
-              <div className="overflow-x-auto pb-2">
-                <div className="min-w-[320px]">
+                ) : (
+                  <EmptyTrend>
+                    Add courses to see how your credits are spread across your
+                    studies.
+                  </EmptyTrend>
+                )}
+              </TabsContent>
+              <TabsContent value="grades">
+                {periodData.some((period) => period.average !== null) ? (
                   <ChartContainer
-                    config={gradeBySemesterConfig}
-                    className="w-full h-[260px]"
+                    config={chartConfig}
+                    className="h-56 w-full aspect-auto"
+                    aria-label={`Average grade per ${studyPeriod}`}
                   >
-                    <LineChart data={gradeBySemester}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <LineChart data={periodData} accessibilityLayer>
+                      <CartesianGrid vertical={false} strokeDasharray="3 5" />
                       <XAxis
                         dataKey="period"
-                        tickLine={false}
                         axisLine={false}
-                        tickMargin={8}
+                        tickLine={false}
+                        tickMargin={10}
                       />
                       <YAxis
-                        domain={[
-                          preferences?.grade_min ?? 1,
-                          preferences?.grade_max ?? 5,
-                        ]}
-                        reversed={(preferences?.grade_min ?? 1) < (preferences?.grade_max ?? 5)}
-                        tickCount={5}
-                        tickLine={false}
-                        axisLine={false}
                         width={30}
+                        axisLine={false}
+                        tickLine={false}
+                        domain={[Math.min(best, worst), Math.max(best, worst)]}
+                        reversed={best < worst}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Line
-                        type="monotone"
                         dataKey="average"
                         stroke="var(--color-average)"
-                        strokeWidth={2}
-                        dot={{ r: 3, fill: "var(--color-average)" }}
-                        activeDot={{ r: 5 }}
+                        strokeWidth={2.5}
+                        dot={{
+                          r: 4,
+                          fill: "var(--color-average)",
+                          strokeWidth: 0,
+                        }}
+                        isAnimationActive={false}
                       />
                     </LineChart>
                   </ChartContainer>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="h-full bg-black/0 overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle>Grade distribution</CardTitle>
-            <CardDescription>Count of graded courses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {gradeDistribution.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No grades recorded yet.</p>
-            ) : (
-              <div className="overflow-x-auto pb-2">
-                <div className="min-w-[320px]">
+                ) : (
+                  <EmptyTrend>
+                    Record a course grade to see your grade trends.
+                  </EmptyTrend>
+                )}
+              </TabsContent>
+              <TabsContent value="distribution">
+                {distribution.length ? (
                   <ChartContainer
-                    config={gradeDistributionConfig}
-                    className="w-full h-[260px] "
+                    config={chartConfig}
+                    className="h-56 w-full aspect-auto"
+                    aria-label="Grade distribution"
                   >
-                    <BarChart data={gradeDistribution}>
-                      <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <BarChart data={distribution} accessibilityLayer>
+                      <CartesianGrid vertical={false} strokeDasharray="3 5" />
                       <XAxis
                         dataKey="grade"
-                        tickLine={false}
                         axisLine={false}
-                        tickMargin={8}
+                        tickLine={false}
+                        tickMargin={10}
                       />
                       <YAxis
-                        allowDecimals={false}
-                        tickLine={false}
-                        axisLine={false}
                         width={30}
+                        axisLine={false}
+                        tickLine={false}
+                        allowDecimals={false}
                       />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Bar
                         dataKey="count"
                         fill="var(--color-count)"
-                        radius={[6, 6, 0, 0]}
+                        radius={[5, 5, 0, 0]}
+                        maxBarSize={48}
+                        isAnimationActive={false}
                       />
                     </BarChart>
                   </ChartContainer>
-                </div>
-              </div>
-            )}
+                ) : (
+                  <EmptyTrend>
+                    Your grade distribution will appear as you add results.
+                  </EmptyTrend>
+                )}
+              </TabsContent>
+            </Tabs>
+            <p className="mt-4 border-t pt-3 text-[11px] leading-5 text-muted-foreground">
+              Grade trends are weighted by course credits. Your overall average
+              follows your grading preferences.
+            </p>
           </CardContent>
         </Card>
       </div>
-      {program.description && (
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold">Description</h2>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {program.description}
-          </p>
+      <section
+        aria-labelledby="program-courses-title"
+        className="min-w-0 overflow-hidden rounded-xl border bg-card shadow-xs"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:px-6">
+          <div>
+            <h2
+              id="program-courses-title"
+              className="text-base font-semibold tracking-tight"
+            >
+              Program courses
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Open a course for details and notes.
+            </p>
+          </div>
+          <CourseForm program={program} />
         </div>
-      )}
-      <hr />
-      <div className="flex">
-        <h1 className="text-xl font-semibold w-full">Courses</h1>
-        <CourseForm program={program} />
-      </div>
-      <CourseTable
-        columns={columns}
-        data={programCourses}
-        getRowHref={(course) => `/app/courses/${course.id}`}
-      />
+        {programCourses.length ? (
+          <CourseTable
+            columns={columns}
+            data={programCourses}
+            getRowHref={(course) => `/app/courses/${course.id}`}
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-3 border-t px-6 py-12 text-center">
+            <GraduationCap
+              aria-hidden="true"
+              className="size-7 text-teal-700 dark:text-teal-400"
+            />
+            <p className="text-sm font-medium">No courses added</p>
+            <p className="text-xs text-muted-foreground">
+              Add a course using the button above to start tracking this
+              program.
+            </p>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

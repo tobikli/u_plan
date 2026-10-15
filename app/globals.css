@@ -115,6 +115,14 @@
 }
 
 @layer base {
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]):not(:disabled),
+  input[type="button"]:not(:disabled),
+  input[type="submit"]:not(:disabled),
+  input[type="reset"]:not(:disabled) {
+    cursor: pointer;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
@@ -126,4 +134,13 @@
   html {
     overflow-x: hidden;
   }
+}
+
+/* The study workspace shares the landing page's restrained teal accents. */
+.app-workspace {
+  --study-accent: var(--color-teal-600);
+}
+
+.dark .app-workspace {
+  --study-accent: var(--color-teal-400);
 }

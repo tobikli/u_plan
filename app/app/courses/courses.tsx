@@ -37,9 +37,9 @@ export function CourseTable<TData, TValue>({
   });
 
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div className="min-w-0 overflow-hidden border-t">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted/25 [&_th]:px-5 [&_th]:text-[11px] [&_th]:font-medium [&_th]:text-muted-foreground">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
@@ -49,7 +49,7 @@ export function CourseTable<TData, TValue>({
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );
@@ -64,12 +64,19 @@ export function CourseTable<TData, TValue>({
                 key={row.id}
                 role={getRowHref ? "link" : undefined}
                 tabIndex={getRowHref ? 0 : undefined}
-                className={getRowHref ? "cursor-pointer" : undefined}
-                onClick={() => {
+                className={
+                  getRowHref
+                    ? "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring [&_td]:px-5 [&_td]:py-4"
+                    : "[&_td]:px-5 [&_td]:py-4"
+                }
+                onClick={(event) => {
+                  if ((event.target as HTMLElement).closest("a, button, input"))
+                    return;
                   const href = getRowHref?.(row.original);
                   if (href) router.push(href);
                 }}
                 onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
                   if (!getRowHref) return;
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -88,8 +95,12 @@ export function CourseTable<TData, TValue>({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center">
-                No results.
+              <TableCell colSpan={columns.length} className="h-40 text-center">
+                <p className="font-medium">No matching courses</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Try a different name, code, program, or tag, or reset your
+                  search.
+                </p>
               </TableCell>
             </TableRow>
           )}
