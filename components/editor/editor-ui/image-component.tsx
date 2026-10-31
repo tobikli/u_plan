@@ -149,11 +149,10 @@ export default function ImageComponent({
   const isEditable = useLexicalEditable()
 
   const $onDelete = useCallback(
-    (payload: KeyboardEvent) => {
+    (payload: KeyboardEvent | null) => {
       const deleteSelection = $getSelection()
       if (isSelected && $isNodeSelection(deleteSelection)) {
-        const event: KeyboardEvent = payload
-        event.preventDefault()
+        payload?.preventDefault()
         editor.update(() => {
           deleteSelection.getNodes().forEach((node) => {
             if ($isImageNode(node)) {
@@ -168,7 +167,8 @@ export default function ImageComponent({
   )
 
   const $onEnter = useCallback(
-    (event: KeyboardEvent) => {
+    (event: KeyboardEvent | null) => {
+      if (!event) return false
       const latestSelection = $getSelection()
       const buttonElem = buttonRef.current
       if (

@@ -1,6 +1,6 @@
 "use client"
 
-import { ColumnDef } from "@tanstack/react-table"
+import { ColumnDef } from "@/lib/table"
 import { Badge } from "@/components/ui/badge"
 import { Course } from "@/types/course"
 import { getStudyPeriodLabel } from "@/lib/study-period"

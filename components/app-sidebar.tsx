@@ -25,7 +25,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import Logo from "@/public/uplan.svg";
+import Logo from "@/components/logo";
 
 export const navMainItems = [
   {

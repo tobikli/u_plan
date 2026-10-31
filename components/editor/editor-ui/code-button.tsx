@@ -19,9 +19,10 @@ interface Props {
 export function CopyButton({ editor, getCodeDOMNode }: Props) {
   const [isCopyCompleted, setCopyCompleted] = useState<boolean>(false)
 
-  const removeSuccessIcon = useDebounce(() => {
+  const resetCopyCompleted = React.useCallback(() => {
     setCopyCompleted(false)
-  }, 1000)
+  }, [])
+  const removeSuccessIcon = useDebounce(resetCopyCompleted, 1000)
 
   async function handleClick(): Promise<void> {
     const codeDOMNode = getCodeDOMNode()

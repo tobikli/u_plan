@@ -18,7 +18,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { PopoverPortal } from "@radix-ui/react-popover"
 import type { LexicalEditor } from "lexical"
-import { TwitterIcon, YoutubeIcon } from "lucide-react"
+import { IconBrandTwitter as TwitterIcon, IconBrandYoutube as YoutubeIcon } from "@tabler/icons-react"
 
 import { useEditorModal } from "@/components/editor/editor-hooks/use-modal"
 import { INSERT_TWEET_COMMAND } from "@/components/editor/plugins/embeds/twitter-plugin"

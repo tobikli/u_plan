@@ -13,14 +13,6 @@ const nextConfig = {
   images: {
     remotePatterns: [new URL("https://static.twks.net/**"), new URL("https://www.gravatar.com/avatar/**")],
   },
-  turbopack: {
-    rules: {
-      "*.svg": {
-        loaders: ["@svgr/webpack"],
-        as: "*.js",
-      },
-    },
-  },
 } satisfies NextConfig;
 
 export default nextConfig;

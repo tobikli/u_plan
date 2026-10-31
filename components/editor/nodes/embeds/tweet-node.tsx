@@ -1,5 +1,5 @@
 import * as React from "react"
-import { JSX, useCallback, useEffect, useRef, useState } from "react"
+import { JSX, useEffect, useRef, useState } from "react"
 import { BlockWithAlignableContents } from "@lexical/react/LexicalBlockWithAlignableContents"
 import {
   DecoratorBlockNode,
@@ -56,49 +56,49 @@ function TweetComponent({
 }: TweetComponentProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  const previousTweetIDRef = useRef<string>("")
-  const [isTweetLoading, setIsTweetLoading] = useState(false)
+  const [loadedTweetID, setLoadedTweetID] = useState<string | null>(null)
+  const isTweetLoading = loadedTweetID !== tweetID
 
-  const createTweet = useCallback(async () => {
-    try {
-      // @ts-expect-error Twitter is attached to the window.
-      await window.twttr.widgets.createTweet(tweetID, containerRef.current)
+  useEffect(() => {
+    let cancelled = false
+    const container = containerRef.current
+    if (!container) return
 
-      setIsTweetLoading(false)
-      isTwitterScriptLoading = false
+    const createTweet = () => {
+      container.replaceChildren()
+      // @ts-expect-error Twitter is attached to the window by widgets.js.
+      const result: Promise<unknown> = window.twttr.widgets.createTweet(tweetID, container)
+      return result.then(() => {
+        if (cancelled) return
+        setLoadedTweetID(tweetID)
+        isTwitterScriptLoading = false
+        onLoad?.()
+      }, (error: unknown) => {
+        if (!cancelled) onError?.(String(error))
+      })
+    }
 
-      if (onLoad) {
-        onLoad()
-      }
-    } catch (error) {
-      if (onError) {
-        onError(String(error))
+    let script: HTMLScriptElement | undefined
+    if (isTwitterScriptLoading) {
+      script = document.createElement("script")
+      script.src = WIDGET_SCRIPT_URL
+      script.async = true
+      script.onload = () => { if (!cancelled) void createTweet() }
+      script.onerror = () => { if (!cancelled) onError?.("Could not load Twitter widgets") }
+      document.body.appendChild(script)
+    } else {
+      void createTweet()
+    }
+
+    return () => {
+      cancelled = true
+      if (script) {
+        script.onload = null
+        script.onerror = null
+        script.remove()
       }
     }
   }, [onError, onLoad, tweetID])
-
-  useEffect(() => {
-    if (tweetID !== previousTweetIDRef.current) {
-      setIsTweetLoading(true)
-
-      if (isTwitterScriptLoading) {
-        const script = document.createElement("script")
-        script.src = WIDGET_SCRIPT_URL
-        script.async = true
-        document.body?.appendChild(script)
-        script.onload = createTweet
-        if (onError) {
-          script.onerror = onError as OnErrorEventHandler
-        }
-      } else {
-        createTweet()
-      }
-
-      if (previousTweetIDRef) {
-        previousTweetIDRef.current = tweetID
-      }
-    }
-  }, [createTweet, onError, tweetID])
 
   return (
     <BlockWithAlignableContents

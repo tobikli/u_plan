@@ -3,7 +3,7 @@
 import { ModeToggle } from '@/components/theme-toggle'
 import { Card } from '@/components/ui/card' 
 import { Button } from '@/components/ui/button'
-import Logo from "@/public/uplan.svg";
+import Logo from "@/components/logo";
 
 export default function NotFound() {
 

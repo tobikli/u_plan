@@ -108,17 +108,12 @@ export function InsertTableDialog({
 }): JSX.Element {
   const [rows, setRows] = useState("5")
   const [columns, setColumns] = useState("5")
-  const [isDisabled, setIsDisabled] = useState(true)
-
-  useEffect(() => {
-    const row = Number(rows)
-    const column = Number(columns)
-    if (row && row > 0 && row <= 500 && column && column > 0 && column <= 50) {
-      setIsDisabled(false)
-    } else {
-      setIsDisabled(true)
-    }
-  }, [rows, columns])
+  const rowCount = Number(rows)
+  const columnCount = Number(columns)
+  const isDisabled = !(
+    Number.isInteger(rowCount) && rowCount > 0 && rowCount <= 500 &&
+    Number.isInteger(columnCount) && columnCount > 0 && columnCount <= 50
+  )
 
   const onClick = () => {
     activeEditor.dispatchCommand(INSERT_TABLE_COMMAND, {

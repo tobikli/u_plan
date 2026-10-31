@@ -1,12 +1,13 @@
 "use client"
 
+import { $isCodeNode } from "@lexical/code"
+
 import { useCallback, useState } from "react"
 import {
-  $isCodeNode,
   CODE_LANGUAGE_FRIENDLY_NAME_MAP,
   CODE_LANGUAGE_MAP,
   getLanguageFriendlyName,
-} from "@lexical/code"
+} from "@lexical/code-prism"
 import { $isListNode } from "@lexical/list"
 import { $findMatchingParent } from "@lexical/utils"
 import {

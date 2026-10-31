@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import Logo from "@/public/uplan.svg";
+import Logo from "@/components/logo";
 import { Separator } from "./ui/separator";
 import Image from "next/image";
 import { Provider } from "@supabase/supabase-js";

@@ -14,7 +14,7 @@ Planning workspace built on Next.js + Supabase with protected dashboard views fo
 - Tailwind/shadcn-ui components, Radix Primitives
 
 ## Prerequisites
-- Node.js 20+ and npm
+- Node.js 26+ and npm
 - Supabase project (URL + keys)
 
 ## Environment
@@ -27,7 +27,7 @@ SERVICE_ROLE_KEY=your-supabase-service-role-key  # used only on the server
 ```
 
 ## Local Development
-With Nix, enter the development shell for Node.js 22, npm, and Git:
+With Nix, enter the development shell for Node.js 26, npm, Git, and the Supabase CLI:
 
 ```bash
 nix develop
@@ -94,3 +94,20 @@ The server fetches the public program portfolio and expanded curriculum pages fr
 `public.universities` is an authenticated read-only list seeded with TUM. Adding another university requires its own server adapter. The optional links and fractional ECTS are introduced by `20261015223000_university_templates.sql`. Run parser checks with `npm test` and transactional database checks with `supabase db query --linked -f supabase/tests/university_templates.sql`.
 
 The TUMonline curriculum approach was researched with [Vuenc/TUM-Master-Informatics-Offered-Lectures](https://github.com/Vuenc/TUM-Master-Informatics-Offered-Lectures). This integration reads TUMonline directly and does not use that repository's scraped catalogue as a fallback.
+
+## Dependency maintenance
+
+The flake tracks current nixpkgs unstable, with the supported 26.05 Darwin
+branch for Intel macOS because unstable dropped that platform.
+
+Use `nix develop` for the pinned Node.js/npm toolchain. After changing dependencies,
+run `npm ci`, `npm audit`, `npm test`, and `npm run build` inside that shell.
+TypeScript stays on 6.0.x and ESLint on 9.x while the latest Next.js lint plugins
+require those compatible versions. Node type definitions track the flake's Node major.
+
+`tools/minimatch-compat` delegates the old callable CommonJS API used by ESLint
+plugins to minimatch 11 (patched for CVE-2026-118764). The root dependency and
+`$minimatch` override keep every consumer on that implementation. Remove the
+adapter once upstream lint plugins support minimatch 11 directly. The logo is a
+React SVG component so the unused SVGR/SVGO dependency chain does not pull in
+unpatched deepmerge (CVE-2026-93753).

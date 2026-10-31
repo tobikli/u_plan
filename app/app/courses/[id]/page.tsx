@@ -30,27 +30,27 @@ import { toast } from "sonner";
 import { CourseExaminations } from "@/components/examinations/course-examinations";
 import { formatGrade, summarizeExaminations } from "@/lib/examinations";
 
+const emptyParagraph = {
+  children: [],
+  textFormat: 0,
+  textStyle: "",
+  direction: "ltr",
+  format: "",
+  indent: 0,
+  type: "paragraph",
+  version: 1,
+} satisfies SerializedParagraphNode;
+
 const emptyNotes = {
   root: {
-    children: [
-      {
-        children: [],
-        textFormat: 0,
-        textStyle: "",
-        direction: "ltr",
-        format: "",
-        indent: 0,
-        type: "paragraph",
-        version: 1,
-      },
-    ],
+    children: [emptyParagraph],
     direction: "ltr",
     format: "",
     indent: 0,
     type: "root",
     version: 1,
   },
-} satisfies SerializedEditorState<SerializedParagraphNode>;
+} satisfies SerializedEditorState;
 
 function CourseNotes({ course }: { course: Course }) {
   const client = useMemo(() => createClient(), []);

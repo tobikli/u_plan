@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "@/public/uplan.svg";
+import Logo from "@/components/logo";
 
 export function Footer() {
   return (

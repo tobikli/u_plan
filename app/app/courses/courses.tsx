@@ -5,7 +5,7 @@ import {
   flexRender,
   getCoreRowModel,
   useReactTable,
-} from "@tanstack/react-table";
+} from "@/lib/table";
 
 import {
   Table,
@@ -17,17 +17,17 @@ import {
 } from "@/components/ui/table";
 import { useRouter } from "next/navigation";
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface DataTableProps<TData extends object> {
+  columns: ColumnDef<TData>[];
   data: TData[];
   getRowHref?: (row: TData) => string | undefined;
 }
 
-export function CourseTable<TData, TValue>({
+export function CourseTable<TData extends object>({
   columns,
   data,
   getRowHref,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   const router = useRouter();
 
   const table = useReactTable({

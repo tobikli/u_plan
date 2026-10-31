@@ -1,5 +1,7 @@
 "use client"
 
+import { $isCodeNode, CodeNode } from "@lexical/code"
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -7,13 +9,11 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
-import { JSX, useEffect, useRef, useState } from "react"
+import { JSX, useCallback, useEffect, useRef, useState } from "react"
 import {
-  $isCodeNode,
-  CodeNode,
   getLanguageFriendlyName,
-  normalizeCodeLang,
-} from "@lexical/code"
+  normalizeCodeLanguage as normalizeCodeLang,
+} from "@lexical/code-prism"
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import { $getNearestNodeFromDOMNode, isHTMLElement } from "lexical"
 import { createPortal } from "react-dom"
@@ -50,7 +50,7 @@ function CodeActionMenuContainer({
     return codeDOMNodeRef.current
   }
 
-  const debouncedOnMouseMove = useDebounce(
+  const handleMouseMove = useCallback(
     (event: MouseEvent) => {
       const { codeDOMNode, isOutside } = getMouseInfo(event)
       if (isOutside) {
@@ -88,9 +88,9 @@ function CodeActionMenuContainer({
         })
       }
     },
-    50,
-    1000
+    [anchorElem, editor]
   )
+  const debouncedOnMouseMove = useDebounce(handleMouseMove, 50, 1000)
 
   useEffect(() => {
     if (!shouldListenMouseMove) {

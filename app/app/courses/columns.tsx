@@ -1,5 +1,5 @@
 "use client";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from "@/lib/table";
 import Link from "next/link";
 import { Course } from "@/types/course";
 import { Badge } from "@/components/ui/badge";

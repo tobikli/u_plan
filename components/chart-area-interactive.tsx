@@ -144,11 +144,11 @@ export function ChartAreaInteractive() {
   const isMobile = useIsMobile()
   const [timeRange, setTimeRange] = React.useState("90d")
 
-  React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange("7d")
-    }
-  }, [isMobile])
+  const [previousIsMobile, setPreviousIsMobile] = React.useState(isMobile)
+  if (previousIsMobile !== isMobile) {
+    setPreviousIsMobile(isMobile)
+    if (isMobile) setTimeRange("7d")
+  }
 
   const filteredData = chartData.filter((item) => {
     const date = new Date(item.date)
@@ -248,7 +248,7 @@ export function ChartAreaInteractive() {
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value) => {
-                const date = new Date(value)
+                const date = new Date(String(value))
                 return date.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -260,7 +260,7 @@ export function ChartAreaInteractive() {
               content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
+                    return new Date(String(value)).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                     })
